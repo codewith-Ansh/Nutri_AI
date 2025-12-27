@@ -1,0 +1,335 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* NutriChat AI - Health-focused Design System */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    /* Primary - Emerald Health */
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 160 90% 50%;
+    
+    /* Background - Clean & Fresh */
+    --background: 150 20% 98%;
+    --foreground: 160 30% 15%;
+
+    /* Cards & Surfaces */
+    --card: 0 0% 100%;
+    --card-foreground: 160 30% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 160 30% 15%;
+
+    /* Secondary - Soft Sage */
+    --secondary: 150 15% 94%;
+    --secondary-foreground: 160 30% 25%;
+
+    /* Muted - Subtle Gray */
+    --muted: 150 10% 92%;
+    --muted-foreground: 160 10% 45%;
+
+    /* Accent - Warm Green */
+    --accent: 155 60% 90%;
+    --accent-foreground: 160 50% 20%;
+
+    /* Destructive - Warning Red */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Caution - Amber */
+    --caution: 45 93% 47%;
+    --caution-foreground: 45 90% 15%;
+
+    /* Safe - Green */
+    --safe: 142 76% 36%;
+    --safe-foreground: 0 0% 100%;
+
+    /* Chat Colors */
+    --chat-user: 217 91% 60%;
+    --chat-user-foreground: 0 0% 100%;
+    --chat-ai: 0 0% 98%;
+    --chat-ai-foreground: 160 30% 15%;
+
+    /* Borders & Inputs */
+    --border: 150 15% 88%;
+    --input: 150 15% 88%;
+    --ring: 160 84% 39%;
+
+    --radius: 0.75rem;
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(160, 84%, 39%) 0%, hsl(142, 76%, 36%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(150, 20%, 98%) 0%, hsl(150, 15%, 95%) 100%);
+    --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(160 30% 15% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(160 30% 15% / 0.1), 0 2px 4px -2px hsl(160 30% 15% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(160 30% 15% / 0.1), 0 4px 6px -4px hsl(160 30% 15% / 0.1);
+    --shadow-glow: 0 0 30px hsl(160 84% 39% / 0.2);
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --primary: 160 70% 50%;
+    --primary-foreground: 160 30% 10%;
+    --primary-glow: 160 80% 60%;
+
+    --background: 160 20% 8%;
+    --foreground: 150 20% 95%;
+
+    --card: 160 20% 12%;
+    --card-foreground: 150 20% 95%;
+
+    --popover: 160 20% 12%;
+    --popover-foreground: 150 20% 95%;
+
+    --secondary: 160 15% 18%;
+    --secondary-foreground: 150 20% 90%;
+
+    --muted: 160 15% 20%;
+    --muted-foreground: 150 10% 60%;
+
+    --accent: 160 30% 20%;
+    --accent-foreground: 150 80% 80%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+
+    --chat-user: 217 80% 55%;
+    --chat-user-foreground: 0 0% 100%;
+    --chat-ai: 160 15% 15%;
+    --chat-ai-foreground: 150 20% 95%;
+
+    --border: 160 15% 20%;
+    --input: 160 15% 20%;
+    --ring: 160 70% 50%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  /* Chat Bubble Animations */
+  .chat-bubble-enter {
+    animation: chatBubbleEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes chatBubbleEnter {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* Typing Indicator */
+  .typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px;
+  }
+
+  .typing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: hsl(var(--primary));
+    animation: typingBounce 1.4s infinite ease-in-out both;
+  }
+
+  .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+  .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+  .typing-dot:nth-child(3) { animation-delay: 0s; }
+
+  @keyframes typingBounce {
+    0%, 80%, 100% {
+      transform: scale(0.6);
+      opacity: 0.4;
+    }
+    40% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* Suggestion Chips */
+  .suggestion-chip {
+    @apply inline-flex items-center px-4 py-2 rounded-full text-sm font-medium 
+           bg-secondary text-secondary-foreground border border-border
+           transition-all duration-200 cursor-pointer
+           hover:bg-primary hover:text-primary-foreground hover:border-primary
+           hover:shadow-md hover:scale-105 active:scale-100;
+  }
+
+  /* Safety Indicators */
+  .safety-safe {
+    @apply bg-safe/10 text-safe border-safe/20;
+  }
+
+  .safety-caution {
+    @apply bg-caution/10 text-caution-foreground border-caution/20;
+  }
+
+  .safety-avoid {
+    @apply bg-destructive/10 text-destructive border-destructive/20;
+  }
+
+  /* Glass Effect */
+  .glass {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50;
+  }
+
+  /* Gradient Text */
+  .gradient-text {
+    background: var(--gradient-hero);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Pulse Animation */
+  .pulse-ring {
+    @apply absolute inset-0 rounded-full;
+    animation: pulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulseRing {
+    0%, 100% {
+      opacity: 0.3;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0;
+      transform: scale(1.5);
+    }
+  }
+
+  /* Scroll Container */
+  .chat-scroll {
+    @apply overflow-y-auto;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  .chat-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .chat-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .chat-scroll::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 3px;
+  }
+
+  /* Fade in animation */
+  .fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Stagger children animation */
+  .stagger-children > * {
+    opacity: 0;
+    animation: fadeIn 0.4s ease-out forwards;
+  }
+
+  .stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
+  .stagger-children > *:nth-child(2) { animation-delay: 0.2s; }
+  .stagger-children > *:nth-child(3) { animation-delay: 0.3s; }
+  .stagger-children > *:nth-child(4) { animation-delay: 0.4s; }
+  .stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
+
+  /* Image Upload Styles */
+  .image-upload-button {
+    @apply transition-all duration-200 hover:scale-105 active:scale-95;
+  }
+
+  .image-preview-modal {
+    @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4;
+    backdrop-filter: blur(4px);
+  }
+
+  .image-preview-content {
+    @apply bg-card rounded-2xl max-w-md w-full shadow-2xl border border-border;
+    animation: modalEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  @keyframes modalEnter {
+    from {
+      opacity: 0;
+      transform: scale(0.9) translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  /* Mobile optimizations */
+  @media (max-width: 640px) {
+    .image-preview-content {
+      @apply mx-4 max-h-[90vh] overflow-hidden;
+    }
+    
+    .image-preview-content img {
+      @apply max-h-[50vh] object-contain;
+    }
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
