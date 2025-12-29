@@ -13,7 +13,7 @@ interface Message {
   pattern?: any;
 }
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+const CHAT_URL = `${import.meta.env.VITE_API_BASE_URL}/chat/stream`;
 
 export const ChatContainer = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -34,15 +34,18 @@ export const ChatContainer = () => {
     setIsLoading(true);
 
     try {
-      const allMessages = [...messages, userMsg];
+      // Create session ID if we don't have one
+      const sessionId = "session_" + Date.now();
       
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: allMessages }),
+        body: JSON.stringify({ 
+          message: userMessage,
+          session_id: sessionId
+        }),
       });
 
       if (!resp.ok) {
