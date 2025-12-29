@@ -13,9 +13,8 @@ class Settings(BaseSettings):
     DEBUG: bool
     
     # LLM Settings
-    OPENAI_API_KEY: str
-    ANTHROPIC_API_KEY: str = ""
-    LLM_MODEL: str
+    GEMINI_API_KEY: str
+    GEMINI_MODEL: str = "gemini-2.5-flash-exp"
     LLM_TEMPERATURE: float
     MAX_TOKENS: int
     
