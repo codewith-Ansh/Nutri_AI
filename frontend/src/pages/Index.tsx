@@ -3,7 +3,6 @@ import { ChatContainer } from "@/components/ChatContainer";
 import { Footer } from "@/components/Footer";
 import { TestHealthScore } from "@/components/TestHealthScore";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const [showTest, setShowTest] = useState(false);
@@ -16,19 +15,7 @@ const Index = () => {
         <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-safe/5 rounded-full blur-3xl" />
       </div>
       
-      <Header />
-      
-      {/* Debug button - remove in production */}
-      <div className="fixed top-4 right-4 z-50">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={() => setShowTest(!showTest)}
-          className="text-xs"
-        >
-          {showTest ? 'Hide' : 'Test'} Health Score
-        </Button>
-      </div>
+      <Header showTest={showTest} setShowTest={setShowTest} />
       
       <main className="flex-1 flex flex-col overflow-hidden">
         {showTest ? <TestHealthScore /> : <ChatContainer />}

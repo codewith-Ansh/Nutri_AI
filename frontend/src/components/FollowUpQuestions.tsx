@@ -97,8 +97,8 @@ export const FollowUpQuestions = ({ aiResponse, conversationHistory, onQuestionS
     // Always add one scanning question
     questions.push("Scan another product to compare");
     
-    // Remove duplicates and return max 5 questions
-    return [...new Set(questions)].slice(0, 5);
+    // Remove duplicates and return max 4 questions for side-by-side layout
+    return [...new Set(questions)].slice(0, 4);
   };
 
   const questions = generateQuestions();
@@ -106,34 +106,34 @@ export const FollowUpQuestions = ({ aiResponse, conversationHistory, onQuestionS
   if (questions.length === 0) return null;
 
   return (
-    <div className="mt-8 mx-4 p-6 bg-gradient-to-br from-primary/15 via-primary/10 to-safe/15 rounded-2xl border-2 border-primary/40 shadow-xl">
+    <div className="p-6 bg-gradient-to-br from-primary/15 via-primary/10 to-safe/15 rounded-2xl border-2 border-primary/40 shadow-xl">
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-safe flex items-center justify-center shadow-lg">
           <MessageCircle className="h-5 w-5 text-white" />
         </div>
         <div>
-          <span className="text-lg font-bold text-primary">🤖 AI Quick Questions</span>
-          <p className="text-sm text-muted-foreground">Smart suggestions based on your conversation</p>
+          <span className="text-lg font-bold text-primary">🤖 Quick Questions</span>
+          <p className="text-sm text-muted-foreground">Smart suggestions</p>
         </div>
       </div>
       
-      <div className="grid grid-cols-1 gap-3">
-        {questions.map((question, index) => (
+      <div className="space-y-2">
+        {questions.slice(0, 4).map((question, index) => (
           <Button
             key={index}
             variant="outline"
-            size="lg"
+            size="sm"
             onClick={() => onQuestionSelect(question)}
-            className="justify-start text-left h-auto p-4 text-sm font-medium bg-white/80 hover:bg-primary/20 hover:text-primary hover:border-primary/60 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md"
+            className="justify-start text-left h-auto p-3 text-xs font-medium bg-white/80 hover:bg-primary/20 hover:text-primary hover:border-primary/60 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md w-full"
           >
-            <ArrowRight className="h-4 w-4 mr-3 flex-shrink-0 text-primary" />
-            <span>{question}</span>
+            <ArrowRight className="h-3 w-3 mr-2 flex-shrink-0 text-primary" />
+            <span className="truncate">{question}</span>
           </Button>
         ))}
       </div>
       
       <div className="mt-4 text-center">
-        <span className="text-sm text-primary/80 font-medium">✨ Click any question to continue exploring</span>
+        <span className="text-xs text-primary/80 font-medium">✨ Click to explore</span>
       </div>
     </div>
   );

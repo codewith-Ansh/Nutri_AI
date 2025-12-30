@@ -1,6 +1,12 @@
 import { Leaf, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-export const Header = () => {
+interface HeaderProps {
+  showTest: boolean;
+  setShowTest: (show: boolean) => void;
+}
+
+export const Header = ({ showTest, setShowTest }: HeaderProps) => {
   return (
     <header className="sticky top-0 z-50 glass border-b border-border/50">
       <div className="container max-w-4xl mx-auto px-4 py-3">
@@ -21,11 +27,15 @@ export const Header = () => {
             </div>
           </div>
 
-          {/* Badge */}
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-accent rounded-full">
-            <div className="w-2 h-2 rounded-full bg-safe animate-pulse" />
-            <span className="text-xs font-medium text-accent-foreground">AI Powered</span>
-          </div>
+          {/* Health Score Button */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowTest(!showTest)}
+            className="text-xs font-medium"
+          >
+            HEALTH SCORE
+          </Button>
         </div>
       </div>
     </header>

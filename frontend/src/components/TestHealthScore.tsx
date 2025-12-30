@@ -34,7 +34,7 @@ export const TestHealthScore = () => {
 
   return (
     <div className="p-4">
-      <h2 className="text-lg font-bold mb-4">Health Score Test</h2>
+      <h2 className="text-lg font-bold mb-4">HEALTH SCORE</h2>
       <HealthRiskScore
         score={testScore.score}
         risks={testScore.risks}
