@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.models.request_models import TextAnalysisRequest, ImageUploadMetadata
 from app.models.response_models import AnalysisResponse
-from app.services.image_service import image_service
+from app.services.image_services import image_service
 from app.services.text_processor import text_processor
 from app.services.reasoning_service import reasoning_service
 from app.utils.session_manager import session_manager
