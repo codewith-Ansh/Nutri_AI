@@ -17,12 +17,12 @@ async def health_check():
 async def llm_health_check():
     """Check LLM service availability"""
     try:
-        from app.services.llm_service import llm_service
-        llm_service.validate_api_key()
+        from app.services.gemini_service import gemini_service
+        gemini_service.validate_api_key()
         return {
             "status": "healthy",
             "llm_service": "available",
-            "model": settings.LLM_MODEL
+            "model": settings.GEMINI_MODEL
         }
     except Exception as e:
         return {
