@@ -13,7 +13,7 @@ interface Message {
   pattern?: any;
 }
 
-const CHAT_URL = `${import.meta.env.VITE_API_BASE_URL}/chat/stream`;
+const CHAT_URL = `${import.meta.env.VITE_API_BASE_URL}/api/chat/stream`;
 
 export const ChatContainer = () => {
   const [messages, setMessages] = useState<Message[]>([]);
