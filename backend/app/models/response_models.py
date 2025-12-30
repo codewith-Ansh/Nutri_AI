@@ -15,7 +15,7 @@ class ChatResponse(BaseModel):
     success: bool
     session_id: str
     response: str
-    message_count: int
+    message_count: Optional[int] = None
 
 class ErrorResponse(BaseModel):
     """Error response model"""

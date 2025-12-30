@@ -15,7 +15,7 @@ class TextAnalysisRequest(BaseModel):
 class ChatRequest(BaseModel):
     """Request model for chat interactions"""
     message: str = Field(..., min_length=1, description="User message")
-    session_id: str = Field(..., description="Session ID for maintaining context")
+    session_id: Optional[str] = Field(None, description="Session ID for maintaining context")
     context: Optional[dict] = Field(None, description="Additional context")
     
     @validator('message')

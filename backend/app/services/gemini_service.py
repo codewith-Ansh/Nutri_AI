@@ -135,6 +135,52 @@ class GeminiService:
         if not settings.GEMINI_API_KEY or settings.GEMINI_API_KEY == "your_gemini_api_key_here":
             raise LLMServiceError("Gemini API key not configured")
         return True
+    
+    async def generate_chat_response(
+        self,
+        message: str,
+        conversation_history: list = None
+    ) -> str:
+        """Generate chat response with conversation context"""
+        if conversation_history:
+            return await self.generate_with_context(
+                message, 
+                conversation_history,
+                "You are NutriAI, a helpful nutrition assistant. Provide accurate, helpful information about food, nutrition, and healthy eating."
+            )
+        else:
+            return await self.generate_text(
+                message,
+                "You are NutriAI, a helpful nutrition assistant. Provide accurate, helpful information about food, nutrition, and healthy eating."
+            )
+    
+    async def stream_chat_response(
+        self,
+        message: str,
+        conversation_history: list = None
+    ) -> AsyncGenerator[str, None]:
+        """Stream chat response with conversation context"""
+        try:
+            # Build context if provided
+            if conversation_history:
+                context_parts = []
+                for msg in conversation_history:
+                    role = "user" if msg["role"] == "user" else "assistant"
+                    context_parts.append(f"{role}: {msg['content']}")
+                
+                full_prompt = f"Conversation history:\n" + "\n".join(context_parts) + f"\n\nuser: {message}"
+            else:
+                full_prompt = message
+            
+            # Stream response
+            for chunk in self.stream_text(
+                full_prompt,
+                "You are NutriAI, a helpful nutrition assistant. Provide accurate, helpful information about food, nutrition, and healthy eating."
+            ):
+                yield chunk
+        except Exception as e:
+            logger.error(f"Chat streaming error: {str(e)}")
+            raise LLMServiceError(f"Failed to stream chat response: {str(e)}")
 
 # Singleton instance
 gemini_service = GeminiService()
