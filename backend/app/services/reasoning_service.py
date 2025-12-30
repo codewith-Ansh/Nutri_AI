@@ -1,13 +1,14 @@
-from app.services.llm_service import llm_service
+from app.services.gemini_service import gemini_service
 from app.utils.prompts import PromptTemplates
 from app.core.exceptions import LLMServiceError
 import logging
+from typing import AsyncGenerator
 
 logger = logging.getLogger(__name__)
 
 class ReasoningService:
     def __init__(self):
-        self.llm = llm_service
+        self.llm = gemini_service
         self.prompts = PromptTemplates()
     
     async def analyze_ingredients(self, ingredients: list[str], context: dict = None) -> dict:
@@ -75,6 +76,29 @@ class ReasoningService:
         except Exception as e:
             logger.error(f"Conversational analysis error: {str(e)}")
             raise LLMServiceError("Failed to generate conversational response")
+    
+    def stream_conversational_analysis(
+        self,
+        message: str,
+        conversation_history: list
+    ):
+        """Stream conversational response with context"""
+        try:
+            system_prompt = self.prompts.get_conversational_system_prompt()
+            
+            # Build conversation context
+            context_parts = []
+            for msg in conversation_history:
+                role = "user" if msg["role"] == "user" else "assistant"
+                context_parts.append(f"{role}: {msg['content']}")
+            
+            full_prompt = f"Conversation history:\n" + "\n".join(context_parts) + f"\n\nuser: {message}"
+            
+            for chunk in self.llm.stream_text(full_prompt, system_prompt):
+                yield chunk
+        except Exception as e:
+            logger.error(f"Streaming conversational analysis error: {str(e)}")
+            raise LLMServiceError("Failed to stream conversational response")
 
 # Singleton instance
 reasoning_service = ReasoningService()
