@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     # CORS Settings
     ALLOWED_ORIGINS: str
     
+    # OpenFoodFacts Settings
+    OFF_BASE_URL: str = "https://world.openfoodfacts.org"
+    OFF_TIMEOUT_SECONDS: int = 10
+    
     class Config:
         env_file = ".env"
     
