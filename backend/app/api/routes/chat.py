@@ -52,12 +52,15 @@ async def chat(request: ChatRequest):
         
         # Check if message contains ingredients for reasoning analysis
         ingredients = context.get('recent_ingredients', [])
+        product_info = context.get('product_info')  # Get product context if available
+        
         if ingredients:
             # Use reasoning v2 for ingredient-related queries
             reasoning_result = await reasoning_service_v2.generate(
                 ingredients=ingredients,
                 intent_profile=intent_profile,
-                recent_history=history[-3:] if history else None
+                recent_history=history[-3:] if history else None,
+                product_info=product_info
             )
             response_text = reasoning_result.narrative
             

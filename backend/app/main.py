@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.config import settings
 from app.core.exceptions import NutriAIException
-from app.api.routes import health, analyze, chat, intent, product, kb
+from app.api.routes import health, analyze, chat, intent, product, kb, tools
 import logging
 
 # Configure logging
@@ -42,6 +42,7 @@ app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(intent.router, prefix="/api", tags=["Intent"])
 app.include_router(product.router, prefix="/api", tags=["Product"])
 app.include_router(kb.router, prefix="/api/kb", tags=["Knowledge Base"])
+app.include_router(tools.router, prefix="/api/tools", tags=["Tools"])
 
 # Global exception handler
 @app.exception_handler(NutriAIException)

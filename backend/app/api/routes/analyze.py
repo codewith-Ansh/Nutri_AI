@@ -56,7 +56,8 @@ async def analyze_text(request: TextAnalysisRequest):
             ingredients=ingredients,
             extracted_text=request.text,
             intent_profile=intent_profile.dict(),
-            recent_history=history[-3:] if history else None
+            recent_history=history[-3:] if history else None,
+            product_info=context.get('product_info')  # Include product context if available
         )
         
         # Store in session
@@ -113,7 +114,8 @@ async def analyze_image(file: UploadFile = File(...)):
         reasoning_result = await reasoning_service_v2.generate(
             ingredients=image_result['ingredients'],
             extracted_text=image_result['extracted_text'],
-            intent_profile=intent_profile.dict()
+            intent_profile=intent_profile.dict(),
+            product_info=None  # No product info from image analysis yet
         )
         
         # Store in session

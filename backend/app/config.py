@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     OFF_BASE_URL: str = "https://world.openfoodfacts.org"
     OFF_TIMEOUT_SECONDS: int = 10
     
+    # Tools API Settings
+    TOOLS_API_KEY: str = "debug-tools-key-2024"
+    
     class Config:
         env_file = ".env"
     
