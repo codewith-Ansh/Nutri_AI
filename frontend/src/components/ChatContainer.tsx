@@ -21,7 +21,6 @@ export const ChatContainer = () => {
   const [showFollowUp, setShowFollowUp] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
@@ -34,7 +33,6 @@ export const ChatContainer = () => {
     setIsLoading(true);
 
     try {
-      // Create session ID if we don't have one
       const sessionId = "session_" + Date.now();
       
       const resp = await fetch(CHAT_URL, {
@@ -63,7 +61,6 @@ export const ChatContainer = () => {
       let assistantContent = "";
       let streamDone = false;
 
-      // Add empty assistant message
       setMessages(prev => [...prev, { role: "assistant", content: "" }]);
       setIsLoading(false);
 
@@ -102,14 +99,12 @@ export const ChatContainer = () => {
               });
             }
           } catch {
-            // Incomplete JSON, put it back
             textBuffer = line + "\n" + textBuffer;
             break;
           }
         }
       }
 
-      // Final flush
       if (textBuffer.trim()) {
         for (let raw of textBuffer.split("\n")) {
           if (!raw) continue;
@@ -136,12 +131,10 @@ export const ChatContainer = () => {
         }
       }
       
-      // Detect patterns after response is complete
       const allMessagesWithNew = [...messages, userMsg, { role: "assistant", content: assistantContent }];
       const detectedPattern = detectPatterns(allMessagesWithNew);
       
       if (detectedPattern) {
-        // Add pattern to the last assistant message
         setMessages(prev => {
           const newMessages = [...prev];
           const lastIdx = newMessages.length - 1;
@@ -152,13 +145,11 @@ export const ChatContainer = () => {
         });
       }
       
-      // Show follow-up questions after AI response
       setShowFollowUp(true);
     } catch (error) {
       console.error("Chat error:", error);
       setIsLoading(false);
       
-      // Remove failed assistant message if it was empty
       setMessages(prev => {
         const lastMsg = prev[prev.length - 1];
         if (lastMsg?.role === "assistant" && !lastMsg.content) {
@@ -177,7 +168,7 @@ export const ChatContainer = () => {
 
   const handleSend = useCallback((message: string) => {
     if (message.trim()) {
-      setShowFollowUp(false); // Hide follow-up when new message sent
+      setShowFollowUp(false);
       streamChat(message);
     }
   }, [streamChat]);
@@ -194,7 +185,6 @@ export const ChatContainer = () => {
     const questions: string[] = [];
     const response = aiResponse.toLowerCase();
     
-    // Generate questions based on response content
     if (response.includes('sodium')) questions.push('How much sodium is safe daily?');
     if (response.includes('sugar')) questions.push('What are sugar-free alternatives?');
     if (response.includes('trans fat')) questions.push('Why are trans fats harmful?');
@@ -203,7 +193,6 @@ export const ChatContainer = () => {
     if (response.includes('preservative')) questions.push('Are preservatives dangerous?');
     if (response.includes('palm oil')) questions.push('Why avoid palm oil?');
     
-    // Get health score from response
     const scoreMatch = response.match(/(\d+)\/100/);
     const score = scoreMatch ? parseInt(scoreMatch[1]) : 50;
     
@@ -217,7 +206,6 @@ export const ChatContainer = () => {
       questions.push('How can I make this healthier?');
     }
     
-    // Add generic nutritional questions if not enough specific ones
     if (questions.length < 3) {
       questions.push('What nutrients does this provide?');
       questions.push('How does this affect my health?');
@@ -228,63 +216,47 @@ export const ChatContainer = () => {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Messages Area */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto chat-scroll px-4 py-6"
+        className="flex-1 overflow-y-auto"
       >
-        <div className="container max-w-3xl mx-auto">
-          {messages.length === 0 ? (
+        {messages.length === 0 ? (
+          <div className="h-full flex items-center justify-center">
             <WelcomeMessage onSuggestionSelect={handleSuggestionSelect} />
-          ) : (
-            <div className="space-y-4">
-              {messages.map((message, index) => (
-                <ChatMessage
-                  key={index}
-                  role={message.role}
-                  content={message.content}
-                  pattern={message.pattern}
-                  conversationHistory={messages}
-                  onFollowUpSelect={handleFollowUpSelect}
-                  isStreaming={
-                    isLoading &&
-                    index === messages.length - 1 &&
-                    message.role === "assistant"
-                  }
-                />
-              ))}
-              {isLoading && messages[messages.length - 1]?.role === "user" && (
-                <TypingIndicator />
-              )}
-              
-              {/* AI Confidence Score - Only show when patterns detected */}
+          </div>
+        ) : (
+          <div className="flex">
+            {/* Left Sidebar - AI Confidence */}
+            <div className="w-64 flex-shrink-0 p-4">
               {(() => {
-                const detectedPattern = detectPatterns(messages);
-                if (!detectedPattern || isLoading || messages.length === 0 || messages[messages.length - 1]?.role !== "assistant") return null;
+                const lastMessage = messages[messages.length - 1];
+                const detectedPattern = lastMessage?.role === "assistant" && !isLoading ? 
+                  lastMessage.pattern || detectPatterns(messages) : null;
                 
-                const confidence = detectedPattern.confidence;
-                const getConfidenceColor = (conf: number) => {
-                  if (conf >= 80) return 'from-green-500 to-emerald-500';
-                  if (conf >= 60) return 'from-blue-500 to-indigo-500';
-                  return 'from-yellow-500 to-orange-500';
-                };
+                if (!detectedPattern) return null;
                 
                 return (
-                  <div className="mt-6 max-w-md mx-auto">
-                    <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className={`w-8 h-8 rounded-full bg-gradient-to-r ${getConfidenceColor(confidence)} flex items-center justify-center shadow-sm`}>
+                  <div className="sticky top-4">
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                          detectedPattern.confidence >= 80 ? 'bg-emerald-500' :
+                          detectedPattern.confidence >= 60 ? 'bg-blue-500' : 'bg-amber-500'
+                        }`}>
                           <span className="text-white font-bold text-xs">AI</span>
                         </div>
-                        <div>
-                          <span className="text-sm font-bold text-blue-600">🎯 AI Confidence</span>
-                          <p className="text-xs text-gray-600">{detectedPattern.title}</p>
-                        </div>
+                        <span className="text-sm font-medium text-gray-900">Confidence</span>
                       </div>
                       <div className="text-center">
-                        <div className="text-xl font-bold text-blue-600 mb-2">{confidence}%</div>
-                        <div className="w-full bg-gray-200 rounded-full h-1.5 mb-2">
-                          <div className={`bg-gradient-to-r ${getConfidenceColor(confidence)} h-1.5 rounded-full`} style={{width: `${confidence}%`}}></div>
+                        <div className="text-2xl font-bold text-gray-900 mb-2">{detectedPattern.confidence}%</div>
+                        <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                          <div 
+                            className={`h-2 rounded-full transition-all duration-500 ${
+                              detectedPattern.confidence >= 80 ? 'bg-emerald-500' :
+                              detectedPattern.confidence >= 60 ? 'bg-blue-500' : 'bg-amber-500'
+                            }`} 
+                            style={{width: `${detectedPattern.confidence}%`}}
+                          ></div>
                         </div>
                         <p className="text-xs text-gray-600">{detectedPattern.description}</p>
                       </div>
@@ -294,17 +266,63 @@ export const ChatContainer = () => {
               })()
               }
             </div>
-          )}
-        </div>
+            
+            {/* Main Chat Area */}
+            <div className="flex-1 max-w-3xl mx-auto px-4 py-6">
+              <div className="space-y-6">
+                {messages.map((message, index) => (
+                  <ChatMessage
+                    key={index}
+                    role={message.role}
+                    content={message.content}
+                    pattern={message.pattern}
+                    conversationHistory={messages}
+                    onFollowUpSelect={handleFollowUpSelect}
+                    isStreaming={
+                      isLoading &&
+                      index === messages.length - 1 &&
+                      message.role === "assistant"
+                    }
+                  />
+                ))}
+                {isLoading && messages[messages.length - 1]?.role === "user" && (
+                  <TypingIndicator />
+                )}
+              </div>
+            </div>
+            
+            {/* Right Sidebar - AI Pattern */}
+            <div className="w-64 flex-shrink-0 p-4">
+              {(() => {
+                const lastMessage = messages[messages.length - 1];
+                const detectedPattern = lastMessage?.role === "assistant" && !isLoading ? 
+                  lastMessage.pattern || detectPatterns(messages) : null;
+                
+                if (!detectedPattern) return null;
+                
+                return (
+                  <div className="sticky top-4">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+                      <h3 className="text-sm font-medium text-blue-900 mb-2">Pattern Analysis</h3>
+                      <div className="text-xs text-blue-700 space-y-1">
+                        <div>Type: {detectedPattern.title}</div>
+                        <div>Insights: {detectedPattern.insights || 'Processing...'}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()
+              }
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Input Area */}
-      <div className="border-t border-border bg-card/50 backdrop-blur-lg">
-        <div className="container max-w-3xl mx-auto px-4 py-4">
-          {/* Quick Questions - Horizontal Scroll */}
+      <div className="border-t border-gray-100 bg-white">
+        <div className="max-w-3xl mx-auto px-4 py-4">
           {showFollowUp && !isLoading && messages.length > 0 && messages[messages.length - 1]?.role === "assistant" && (
-            <div className="mb-3">
-              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+            <div className="mb-4">
+              <div className="flex flex-wrap gap-2">
                 {(() => {
                   const lastResponse = messages[messages.length - 1]?.content || "";
                   const questions = generateQuickQuestions(lastResponse, messages);
@@ -312,7 +330,7 @@ export const ChatContainer = () => {
                     <button
                       key={index}
                       onClick={() => handleFollowUpSelect(question)}
-                      className="flex-shrink-0 px-3 py-1.5 text-xs font-medium bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-full transition-colors whitespace-nowrap"
+                      className="px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg transition-colors"
                     >
                       {question}
                     </button>
@@ -323,9 +341,6 @@ export const ChatContainer = () => {
           )}
           
           <ChatInput onSend={handleSend} disabled={isLoading} />
-          <p className="text-xs text-muted-foreground text-center mt-2">
-            NutriChat provides educational information only. Always consult a healthcare professional for medical advice.
-          </p>
         </div>
       </div>
     </div>
