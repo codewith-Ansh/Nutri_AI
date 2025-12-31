@@ -2,6 +2,7 @@ import logging
 from typing import List, Optional, Dict, Any
 from app.models.ai_output_models import ReasoningV2Result, Finding, Tradeoff, Recommendation
 from app.services.gemini_service import gemini_service
+from app.tools.ingredient_kb_tool import ingredient_kb_tool
 from app.utils.json_guard import extract_and_parse_json, JSONExtractionError
 from app.utils.prompts_v2 import REASONING_V2_SYSTEM_PROMPT
 from app.core.exceptions import LLMServiceError
@@ -85,11 +86,19 @@ class ReasoningServiceV2:
         """Build compact context block for reasoning"""
         context_parts = []
         
-        # Ingredients
+        # Ingredients with KB lookup
         if ingredients:
             context_parts.append(f"Ingredients ({len(ingredients)}): {', '.join(ingredients[:10])}")
             if len(ingredients) > 10:
                 context_parts.append(f"... and {len(ingredients) - 10} more")
+            
+            # Add KB knowledge for key ingredients
+            kb_matches = ingredient_kb_tool.bulk_lookup(ingredients[:5])  # Top 5 for context
+            if kb_matches:
+                kb_info = []
+                for match in kb_matches:
+                    kb_info.append(f"{match['name']}: {match['why_it_matters']} ({match['confidence']} confidence)")
+                context_parts.append(f"KB Knowledge: {' | '.join(kb_info)}")
         
         # Intent context
         if intent_profile:

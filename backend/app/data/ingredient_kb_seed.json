@@ -1,0 +1,190 @@
+[
+  {
+    "name": "sodium benzoate",
+    "aliases": ["e211", "benzoate of soda"],
+    "category": "preservative",
+    "why_it_matters": "prevents mold/bacteria but may form benzene with vitamin C",
+    "typical_use": "soft drinks, pickles, salad dressings",
+    "common_concerns": ["benzene formation", "hyperactivity in children"],
+    "confidence": "medium",
+    "notes_uncertainty": "benzene risk depends on storage conditions"
+  },
+  {
+    "name": "potassium sorbate",
+    "aliases": ["e202", "sorbic acid potassium salt"],
+    "category": "preservative", 
+    "why_it_matters": "generally safer preservative alternative",
+    "typical_use": "cheese, wine, baked goods",
+    "common_concerns": ["mild allergic reactions"],
+    "confidence": "high"
+  },
+  {
+    "name": "carrageenan",
+    "aliases": ["e407", "irish moss extract"],
+    "category": "thickener",
+    "why_it_matters": "controversial thickener linked to inflammation",
+    "typical_use": "dairy alternatives, processed meats",
+    "common_concerns": ["digestive inflammation", "gut health"],
+    "confidence": "low",
+    "notes_uncertainty": "studies show mixed results on safety"
+  },
+  {
+    "name": "monosodium glutamate",
+    "aliases": ["msg", "e621", "glutamic acid"],
+    "category": "flavor enhancer",
+    "why_it_matters": "umami enhancer, generally recognized as safe",
+    "typical_use": "asian cuisine, processed foods, snacks",
+    "common_concerns": ["headaches", "nausea"],
+    "confidence": "high",
+    "notes_uncertainty": "symptoms are rare and not well-documented"
+  },
+  {
+    "name": "aspartame",
+    "aliases": ["e951", "nutrasweet", "equal"],
+    "category": "artificial sweetener",
+    "why_it_matters": "zero-calorie sweetener with phenylketonuria warning",
+    "typical_use": "diet sodas, sugar-free gum, low-cal desserts",
+    "common_concerns": ["headaches", "pku risk", "cancer concerns"],
+    "confidence": "medium",
+    "notes_uncertainty": "cancer studies inconclusive in humans"
+  },
+  {
+    "name": "sucralose",
+    "aliases": ["e955", "splenda"],
+    "category": "artificial sweetener",
+    "why_it_matters": "heat-stable artificial sweetener",
+    "typical_use": "baked goods, beverages, tabletop sweetener",
+    "common_concerns": ["gut microbiome changes", "glucose response"],
+    "confidence": "medium"
+  },
+  {
+    "name": "maltodextrin",
+    "aliases": ["modified starch", "glucose polymer"],
+    "category": "thickener",
+    "why_it_matters": "high glycemic index carbohydrate",
+    "typical_use": "sports drinks, processed foods, sauces",
+    "common_concerns": ["blood sugar spikes", "gut bacteria changes"],
+    "confidence": "high"
+  },
+  {
+    "name": "palm oil",
+    "aliases": ["palm kernel oil", "elaeis guineensis"],
+    "category": "fat",
+    "why_it_matters": "high saturated fat, environmental concerns",
+    "typical_use": "processed foods, cosmetics, biofuel",
+    "common_concerns": ["deforestation", "saturated fat content"],
+    "confidence": "high"
+  },
+  {
+    "name": "tbhq",
+    "aliases": ["e319", "tertiary butylhydroquinone"],
+    "category": "antioxidant",
+    "why_it_matters": "synthetic preservative with strict usage limits",
+    "typical_use": "crackers, cereals, frozen foods",
+    "common_concerns": ["nausea", "ringing in ears", "delirium"],
+    "confidence": "medium",
+    "notes_uncertainty": "effects at normal consumption levels unclear"
+  },
+  {
+    "name": "bha",
+    "aliases": ["e320", "butylated hydroxyanisole"],
+    "category": "antioxidant",
+    "why_it_matters": "possible carcinogen, banned in some countries",
+    "typical_use": "cereals, chewing gum, potato chips",
+    "common_concerns": ["cancer risk", "hormone disruption"],
+    "confidence": "low",
+    "notes_uncertainty": "carcinogenic in animals, human risk unclear"
+  },
+  {
+    "name": "bht",
+    "aliases": ["e321", "butylated hydroxytoluene"],
+    "category": "antioxidant",
+    "why_it_matters": "synthetic antioxidant with safety concerns",
+    "typical_use": "cereals, oils, cosmetics",
+    "common_concerns": ["liver toxicity", "cancer risk"],
+    "confidence": "low"
+  },
+  {
+    "name": "lecithin",
+    "aliases": ["soy lecithin", "sunflower lecithin", "e322"],
+    "category": "emulsifier",
+    "why_it_matters": "natural emulsifier, generally safe",
+    "typical_use": "chocolate, baked goods, supplements",
+    "common_concerns": ["soy allergies", "gmo concerns"],
+    "confidence": "high"
+  },
+  {
+    "name": "xanthan gum",
+    "aliases": ["e415", "xanthomonas campestris"],
+    "category": "thickener",
+    "why_it_matters": "natural thickener, gluten-free baking essential",
+    "typical_use": "gluten-free products, sauces, dressings",
+    "common_concerns": ["digestive upset in large amounts"],
+    "confidence": "high"
+  },
+  {
+    "name": "high fructose corn syrup",
+    "aliases": ["hfcs", "corn syrup", "glucose-fructose"],
+    "category": "sweetener",
+    "why_it_matters": "linked to obesity and metabolic issues",
+    "typical_use": "sodas, processed foods, baked goods",
+    "common_concerns": ["obesity", "diabetes", "fatty liver"],
+    "confidence": "high"
+  },
+  {
+    "name": "artificial colors",
+    "aliases": ["food dyes", "fd&c colors", "synthetic colors"],
+    "category": "colorant",
+    "why_it_matters": "may cause hyperactivity in sensitive children",
+    "typical_use": "candies, beverages, processed foods",
+    "common_concerns": ["hyperactivity", "allergic reactions"],
+    "confidence": "medium"
+  },
+  {
+    "name": "red dye 40",
+    "aliases": ["e129", "allura red", "fd&c red 40"],
+    "category": "colorant",
+    "why_it_matters": "most common food dye, hyperactivity concerns",
+    "typical_use": "candies, sports drinks, cereals",
+    "common_concerns": ["hyperactivity", "allergic reactions"],
+    "confidence": "medium"
+  },
+  {
+    "name": "yellow dye 5",
+    "aliases": ["e102", "tartrazine", "fd&c yellow 5"],
+    "category": "colorant",
+    "why_it_matters": "requires warning label in EU",
+    "typical_use": "candies, soft drinks, chips",
+    "common_concerns": ["hyperactivity", "asthma", "hives"],
+    "confidence": "medium"
+  },
+  {
+    "name": "sodium nitrite",
+    "aliases": ["e250", "nitrite"],
+    "category": "preservative",
+    "why_it_matters": "prevents botulism but forms nitrosamines",
+    "typical_use": "cured meats, bacon, hot dogs",
+    "common_concerns": ["nitrosamine formation", "cancer risk"],
+    "confidence": "medium"
+  },
+  {
+    "name": "calcium propionate",
+    "aliases": ["e282", "propionic acid calcium"],
+    "category": "preservative",
+    "why_it_matters": "mold inhibitor in baked goods",
+    "typical_use": "bread, baked goods, cheese",
+    "common_concerns": ["behavioral changes in children"],
+    "confidence": "low",
+    "notes_uncertainty": "limited studies on behavioral effects"
+  },
+  {
+    "name": "polysorbate 80",
+    "aliases": ["e433", "tween 80"],
+    "category": "emulsifier",
+    "why_it_matters": "may affect gut microbiome",
+    "typical_use": "ice cream, salad dressings, vitamins",
+    "common_concerns": ["gut inflammation", "microbiome disruption"],
+    "confidence": "low",
+    "notes_uncertainty": "mostly animal studies, human effects unclear"
+  }
+]
