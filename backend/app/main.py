@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.config import settings
 from app.core.exceptions import NutriAIException
-from app.api.routes import health, analyze, chat, intent
+from app.api.routes import health, analyze, chat, intent, product
 import logging
 
 # Configure logging
@@ -40,6 +40,7 @@ app.include_router(health.router, prefix="/api", tags=["Health"])
 app.include_router(analyze.router, prefix="/api", tags=["Analysis"])
 app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(intent.router, prefix="/api", tags=["Intent"])
+app.include_router(product.router, prefix="/api", tags=["Product"])
 
 # Global exception handler
 @app.exception_handler(NutriAIException)
@@ -52,13 +53,13 @@ async def nutriai_exception_handler(request: Request, exc: NutriAIException):
 # Startup event
 @app.on_event("startup")
 async def startup_event():
-    logger.info("🚀 NutriAI Backend starting up...")
-    logger.info(f"📡 API running on {settings.API_HOST}:{settings.API_PORT}")
+    logger.info("NutriAI Backend starting up...")
+    logger.info(f"API running on {settings.API_HOST}:{settings.API_PORT}")
 
 # Shutdown event
 @app.on_event("shutdown")
 async def shutdown_event():
-    logger.info("⛔ NutriAI Backend shutting down...")
+    logger.info("NutriAI Backend shutting down...")
 
 # Root endpoint
 @app.get("/")
