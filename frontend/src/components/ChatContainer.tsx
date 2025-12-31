@@ -322,20 +322,22 @@ export const ChatContainer = () => {
         <div className="max-w-3xl mx-auto px-4 py-4">
           {showFollowUp && !isLoading && messages.length > 0 && messages[messages.length - 1]?.role === "assistant" && (
             <div className="mb-4">
-              <div className="flex flex-wrap gap-2">
-                {(() => {
-                  const lastResponse = messages[messages.length - 1]?.content || "";
-                  const questions = generateQuickQuestions(lastResponse, messages);
-                  return questions.map((question, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleFollowUpSelect(question)}
-                      className="px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg transition-colors"
-                    >
-                      {question}
-                    </button>
-                  ));
-                })()}
+              <div className="overflow-x-auto scrollbar-hide">
+                <div className="flex gap-2 pb-2" style={{minWidth: 'max-content'}}>
+                  {(() => {
+                    const lastResponse = messages[messages.length - 1]?.content || "";
+                    const questions = generateQuickQuestions(lastResponse, messages);
+                    return questions.map((question, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleFollowUpSelect(question)}
+                        className="px-3 py-2 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-full transition-colors whitespace-nowrap flex-shrink-0"
+                      >
+                        {question}
+                      </button>
+                    ));
+                  })()}
+                </div>
               </div>
             </div>
           )}
