@@ -94,6 +94,11 @@ async def chat(request: ChatRequest):
         logger.error(f"Chat error: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+@router.options("/chat/stream")
+async def chat_stream_options():
+    """Handle CORS preflight for chat stream"""
+    return {"message": "OK"}
+
 @router.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
     """Stream chat response from AI assistant"""

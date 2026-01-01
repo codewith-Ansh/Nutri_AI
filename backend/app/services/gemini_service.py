@@ -1,10 +1,13 @@
 import google.generativeai as genai
 from app.config import settings
 from app.core.exceptions import LLMServiceError
+from app.utils.cache import cache
+from app.utils.rate_limit import rate_limiter
 import logging
 from typing import AsyncGenerator, Type
 from pydantic import BaseModel
 import json
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -15,15 +18,32 @@ class GeminiService:
         self.temperature = settings.LLM_TEMPERATURE
         self.max_tokens = settings.MAX_TOKENS
     
+    def _get_cache_key(self, prompt: str, system_instruction: str) -> str:
+        """Generate cache key for prompt"""
+        content = f"{prompt}:{system_instruction}"
+        return f"gemini_response:{hashlib.md5(content.encode()).hexdigest()}"
+    
     async def generate_text(
         self,
         prompt: str,
         system_instruction: str = "You are a helpful AI nutritionist assistant.",
         temperature: float = None,
-        max_output_tokens: int = None
+        max_output_tokens: int = None,
+        use_cache: bool = True
     ) -> str:
-        """Generate text response from Gemini"""
+        """Generate text response from Gemini with caching"""
         try:
+            # Check cache first if enabled
+            if use_cache:
+                cache_key = self._get_cache_key(prompt, system_instruction)
+                cached_result = cache.get(cache_key)
+                if cached_result:
+                    logger.info("Cache hit for Gemini request")
+                    return cached_result
+            
+            # Check rate limit
+            rate_limiter.check_rate_limit("gemini", 60)
+            
             # Configure generation
             generation_config = genai.types.GenerationConfig(
                 temperature=temperature or self.temperature,
@@ -38,7 +58,13 @@ class GeminiService:
             )
             
             response = model.generate_content(prompt)
-            return response.text
+            result = response.text
+            
+            # Cache the result if enabled
+            if use_cache:
+                cache.set(cache_key, result, settings.CACHE_TTL_SECONDS_DEFAULT)
+            
+            return result
         except Exception as e:
             logger.error(f"Gemini generation error: {str(e)}")
             raise LLMServiceError(f"Failed to generate response: {str(e)}")
@@ -50,8 +76,11 @@ class GeminiService:
         temperature: float = None,
         max_output_tokens: int = None
     ):
-        """Stream text response from Gemini"""
+        """Stream text response from Gemini with rate limiting"""
         try:
+            # Check rate limit
+            rate_limiter.check_rate_limit("gemini", 60)
+            
             # Configure generation
             generation_config = genai.types.GenerationConfig(
                 temperature=temperature or self.temperature,
@@ -77,14 +106,15 @@ class GeminiService:
         self,
         prompt: str,
         response_schema: Type[BaseModel],
-        system_instruction: str = "You are a helpful AI nutritionist assistant."
+        system_instruction: str = "You are a helpful AI nutritionist assistant.",
+        use_cache: bool = True
     ) -> BaseModel:
-        """Generate structured JSON response using Gemini"""
+        """Generate structured JSON response using Gemini with caching"""
         try:
             # Add JSON instruction to prompt
             json_prompt = f"{prompt}\n\nPlease respond with valid JSON only."
             
-            response_text = await self.generate_text(json_prompt, system_instruction)
+            response_text = await self.generate_text(json_prompt, system_instruction, use_cache=use_cache)
             
             # Parse JSON response into Pydantic model
             json_data = json.loads(response_text)
@@ -97,7 +127,8 @@ class GeminiService:
         self,
         prompt: str,
         system_prompt: str = "You are a helpful AI nutritionist assistant.",
-        stream: bool = False
+        stream: bool = False,
+        use_cache: bool = True
     ) -> str:
         """Generate response from Gemini (compatibility method)"""
         if stream:
@@ -107,7 +138,7 @@ class GeminiService:
                 chunks.append(chunk)
             return ''.join(chunks)
         else:
-            return await self.generate_text(prompt, system_prompt)
+            return await self.generate_text(prompt, system_prompt, use_cache=use_cache)
     
     async def generate_with_context(
         self,

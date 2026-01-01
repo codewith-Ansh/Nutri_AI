@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     # OpenFoodFacts Settings
     OFF_BASE_URL: str = "https://world.openfoodfacts.org"
     OFF_TIMEOUT_SECONDS: int = 10
+    OFF_RATE_LIMIT_PER_MINUTE: int = 60
+    
+    # Cache Settings
+    CACHE_TTL_SECONDS_DEFAULT: int = 300
     
     # Tools API Settings
     TOOLS_API_KEY: str = "debug-tools-key-2024"
