@@ -1,7 +1,6 @@
 import json
 import logging
 from typing import Optional, List, Dict
-from app.models.intent_models import IntentProfile, IntentConfidence
 from app.utils.prompts_v2 import INTENT_EXTRACTION_PROMPT_TEMPLATE
 from app.core.exceptions import LLMServiceError
 
@@ -30,19 +29,20 @@ except ImportError:
     
     GEMINI_CLIENT = MinimalGeminiClient()
 
-class IntentService:
+class AINativeIntentService:
+    """AI-native intent service that softly infers context without forms or certainty"""
+    
     def __init__(self):
         self.client = GEMINI_CLIENT
     
-    async def infer_intent(
+    async def soft_infer_context(
         self,
         session_id: str,
         message: str,
-        ingredients: Optional[List[str]] = None,
         recent_history: Optional[List[dict]] = None,
         existing_context: Optional[dict] = None
-    ) -> IntentProfile:
-        """Infer user intent from message and context"""
+    ) -> Dict[str, any]:
+        """Softly infer user context without being certain"""
         try:
             # Format recent messages
             recent_msgs = ""
@@ -52,11 +52,12 @@ class IntentService:
                     for msg in recent_history[-3:]  # Last 3 messages
                 ])
             
-            # Format ingredients
-            ingredients_str = ", ".join(ingredients) if ingredients else "none"
-            
             # Format existing context
             context_str = json.dumps(existing_context) if existing_context else "none"
+            
+            # Extract any ingredients mentioned (but don't focus on them)
+            ingredients_mentioned = self._extract_mentioned_ingredients(message)
+            ingredients_str = ", ".join(ingredients_mentioned) if ingredients_mentioned else "none"
             
             # Build prompt
             prompt = INTENT_EXTRACTION_PROMPT_TEMPLATE.format(
@@ -69,67 +70,74 @@ class IntentService:
             # Call Gemini
             response = await self.client.generate_text(
                 prompt=prompt,
-                system_instruction="You are an expert at inferring user intent from nutrition conversations."
+                system_instruction="You softly infer user context. Be uncertain, use hedge language, make gentle guesses."
             )
             
             # Parse JSON response
             try:
-                intent_data = json.loads(response.strip())
-                intent = IntentProfile(**intent_data)
-                logger.info(f"Inferred intent for session {session_id}: {intent.user_goal}")
-                return intent
+                # Clean the response text
+                response_clean = response.strip()
+                if response_clean.startswith('```json'):
+                    response_clean = response_clean.replace('```json', '').replace('```', '')
+                
+                context_data = json.loads(response_clean)
+                logger.info(f"Softly inferred context for session {session_id}: {context_data.get('likely_goal', 'unclear')}")
+                return context_data
             except (json.JSONDecodeError, ValueError) as e:
-                logger.warning(f"JSON parse failed, retrying with stricter prompt: {e}")
-                # Retry with stricter prompt
-                strict_prompt = prompt + "\n\nIMPORTANT: Return ONLY valid JSON. No explanations or markdown."
-                response = await self.client.generate_text(strict_prompt)
-                intent_data = json.loads(response.strip())
-                return IntentProfile(**intent_data)
+                logger.warning(f"JSON parse failed: {e}")
+                # Return default uncertain context
+                return self._default_uncertain_context()
                 
         except Exception as e:
-            logger.error(f"Intent inference error: {str(e)}")
-            # Return default intent on failure
-            return IntentProfile(
-                confidence=IntentConfidence.low,
-                clarifying_question="Could you tell me more about what you're looking for?"
-            )
+            logger.error(f"Context inference error: {str(e)}")
+            return self._default_uncertain_context()
     
-    def merge_intent(self, old: IntentProfile, new: IntentProfile) -> IntentProfile:
-        """Merge old and new intent profiles intelligently"""
-        # Keep existing goal/dietary_style unless new has higher confidence
-        user_goal = old.user_goal
-        dietary_style = old.dietary_style
+    def _extract_mentioned_ingredients(self, message: str) -> List[str]:
+        """Extract any ingredients mentioned in message (simple keyword matching)"""
+        # Simple approach - look for common ingredient keywords
+        common_ingredients = [
+            'sugar', 'salt', 'sodium', 'oil', 'flour', 'preservatives',
+            'artificial', 'colors', 'flavors', 'palm oil', 'trans fat'
+        ]
         
-        if new.confidence.value == "high" or (new.confidence.value == "medium" and old.confidence.value == "low"):
-            if new.user_goal:
-                user_goal = new.user_goal
-            if new.dietary_style:
-                dietary_style = new.dietary_style
+        message_lower = message.lower()
+        found = [ing for ing in common_ingredients if ing in message_lower]
+        return found[:3]  # Max 3 to keep it simple
+    
+    def _default_uncertain_context(self) -> Dict[str, any]:
+        """Return default uncertain context when inference fails"""
+        return {
+            "likely_goal": "curiosity",
+            "possible_context": None,
+            "soft_concerns": [],
+            "confidence_level": "uncertain",
+            "hedge_language": "I'm not sure what you're most interested in here"
+        }
+    
+    def merge_context_gently(
+        self, 
+        old_context: Dict[str, any], 
+        new_context: Dict[str, any]
+    ) -> Dict[str, any]:
+        """Gently merge contexts, preferring uncertainty over false confidence"""
+        # Only update if new context is more confident
+        old_confidence = old_context.get('confidence_level', 'uncertain')
+        new_confidence = new_context.get('confidence_level', 'uncertain')
         
-        # Merge lists uniquely
-        allergy_risks = list(set(old.allergy_risks + new.allergy_risks))
-        top_concerns = list(set(old.top_concerns + new.top_concerns))
+        confidence_order = {'uncertain': 0, 'somewhat_sure': 1, 'fairly_confident': 2}
         
-        # Use new audience if specified
-        audience = new.audience if new.audience else old.audience
-        
-        # Use highest confidence
-        confidence = new.confidence if new.confidence.value == "high" else (
-            old.confidence if old.confidence.value == "high" else new.confidence
-        )
-        
-        # Keep clarifying question only if still needed
-        clarifying_question = new.clarifying_question if confidence.value == "low" else None
-        
-        return IntentProfile(
-            user_goal=user_goal,
-            dietary_style=dietary_style,
-            allergy_risks=allergy_risks,
-            audience=audience,
-            top_concerns=top_concerns,
-            confidence=confidence,
-            clarifying_question=clarifying_question
-        )
+        if confidence_order.get(new_confidence, 0) > confidence_order.get(old_confidence, 0):
+            # Use new context but keep uncertainty language
+            merged = new_context.copy()
+            merged['hedge_language'] = new_context.get('hedge_language') or "I think this might be about..."
+            return merged
+        else:
+            # Keep old context, maybe add new concerns
+            merged = old_context.copy()
+            old_concerns = set(old_context.get('soft_concerns', []))
+            new_concerns = set(new_context.get('soft_concerns', []))
+            merged['soft_concerns'] = list(old_concerns.union(new_concerns))[:3]  # Max 3
+            return merged
 
 # Singleton instance
-intent_service = IntentService()
+ai_native_intent = AINativeIntentService()
