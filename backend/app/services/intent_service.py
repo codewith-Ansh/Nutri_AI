@@ -94,13 +94,26 @@ class AINativeIntentService:
     
     def _extract_mentioned_ingredients(self, message: str) -> List[str]:
         """Extract any ingredients mentioned in message (simple keyword matching)"""
-        # Simple approach - look for common ingredient keywords
+        # Common ingredient keywords
         common_ingredients = [
             'sugar', 'salt', 'sodium', 'oil', 'flour', 'preservatives',
             'artificial', 'colors', 'flavors', 'palm oil', 'trans fat'
         ]
         
+        # Indian food items that should be recognized
+        indian_foods = [
+            'vadapav', 'vada pav', 'parle g', 'parle-g', 'samosa', 'bhel puri',
+            'pani puri', 'dosa', 'idli', 'upma', 'poha', 'maggi', 'kurkure'
+        ]
+        
         message_lower = message.lower()
+        
+        # Check for Indian foods first
+        found_foods = [food for food in indian_foods if food in message_lower]
+        if found_foods:
+            return found_foods[:2]  # Return food items as "ingredients" for context
+        
+        # Then check for regular ingredients
         found = [ing for ing in common_ingredients if ing in message_lower]
         return found[:3]  # Max 3 to keep it simple
     

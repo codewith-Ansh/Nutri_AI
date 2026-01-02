@@ -58,46 +58,59 @@ async def analyze_text_ai_native(request: TextAnalysisRequest):
 
 @router.post("/analyze/image")
 async def analyze_image_ai_native(file: UploadFile = File(...)):
-    """AI-native image analysis - visual context inference, not OCR-first"""
+    """AI-native image analysis with product recognition from barcodes and ingredients"""
     try:
+        logger.info(f"Image upload received: {file.filename}, size: {file.size}, type: {file.content_type}")
+        
+        # Validate image
+        await image_service.validate_image(file)
+        logger.info("Image validation passed")
+        
         # Read image data
         image_data = await file.read()
+        logger.info(f"Image data read: {len(image_data)} bytes")
         
         # Create session
         session_id = session_manager.create_session()
+        logger.info(f"Session created: {session_id}")
         
         # Get existing context if any
         existing_context = session_manager.get_context(session_id)
         
-        # Softly infer context from image (visual cues, not just text)
+        # Softly infer context from image upload
         inferred_context = await ai_native_intent.soft_infer_context(
             session_id=session_id,
-            message=f"Uploaded image of food product",
+            message="Uploaded image of food product for analysis",
             existing_context=existing_context
         )
+        logger.info("Context inference completed")
         
-        # Generate AI-native reasoning from image
+        # Generate AI-native reasoning from image with product recognition
+        logger.info("Starting image analysis")
         reasoning_response = await ai_native_reasoning.analyze_from_image(
             image_data=image_data,
             inferred_context=inferred_context
         )
+        logger.info("Image analysis completed successfully")
         
         # Store context and conversation
         session_manager.update_context(session_id, inferred_context)
-        session_manager.add_message(session_id, "user", "Shared a photo")
+        session_manager.add_message(session_id, "user", "Shared a photo of food product")
         session_manager.add_message(session_id, "assistant", reasoning_response)
         
-        logger.info(f"AI-native image analysis completed for session {session_id}")
+        logger.info(f"Product recognition analysis completed for session {session_id}")
         
-        # Return simple response - no technical metadata
+        # Return response with product identification
         return {
             "success": True,
             "session_id": session_id,
-            "analysis": reasoning_response
+            "analysis": reasoning_response,
+            "message": "Product analyzed from image"
         }
         
     except NutriAIException as e:
+        logger.error(f"NutriAI exception in image analysis: {str(e)}")
         raise HTTPException(status_code=e.status_code, detail=e.message)
     except Exception as e:
-        logger.error(f"Image analysis error: {str(e)}")
-        raise HTTPException(status_code=500, detail="I couldn't analyze this image right now. Mind trying again?")
+        logger.error(f"Unexpected error in image analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail="I couldn't analyze this image right now. Please try uploading a clear photo of the product package.")

@@ -33,10 +33,34 @@ export const ChatInput = ({ onSend, disabled, placeholder = "Message NutriChat..
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      onSend(`I've uploaded an image of ingredient labels. Please analyze the ingredients and provide health insights.`);
+      try {
+        // Actually upload the image to the API
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/analyze/image`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to analyze image');
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.analysis) {
+          onSend(result.analysis);
+        } else {
+          onSend("I couldn't analyze this image clearly. Please try taking another photo with better lighting.");
+        }
+      } catch (error) {
+        console.error('Image upload error:', error);
+        onSend("I'm having trouble processing the image right now. Please try again.");
+      }
     }
     e.target.value = '';
   };
