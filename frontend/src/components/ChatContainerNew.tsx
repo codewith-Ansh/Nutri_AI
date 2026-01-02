@@ -67,6 +67,7 @@ export const ChatContainer = () => {
       const decoder = new TextDecoder();
       let textBuffer = "";
       let assistantContent = "";
+      let structuredData: any = null;
       let streamDone = false;
 
       setMessages(prev => [...prev, { role: "assistant", content: "" }]);
@@ -97,6 +98,7 @@ export const ChatContainer = () => {
             
             // Handle structured data
             if (parsed.type === "structured") {
+              structuredData = parsed.data;
               setMessages(prev => {
                 const newMessages = [...prev];
                 const lastIdx = newMessages.length - 1;
@@ -177,7 +179,7 @@ export const ChatContainer = () => {
             <WelcomeMessage onSuggestionSelect={handleSend} />
           </div>
         ) : (
-          <div className="max-w-5xl mx-auto px-4 py-6">
+          <div className="max-w-3xl mx-auto px-4 py-6">
             <div className="space-y-6">
               {messages.map((message, index) => (
                 <ChatMessage
@@ -202,7 +204,7 @@ export const ChatContainer = () => {
       </div>
 
       <div className="border-t border-gray-100 bg-white">
-        <div className="max-w-5xl mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 py-4">
           {showFollowUp && !isLoading && messages.length > 0 && messages[messages.length - 1]?.role === "assistant" && (
             <div className="mb-4">
               <div className="flex gap-2 flex-wrap">
