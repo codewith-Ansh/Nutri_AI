@@ -40,9 +40,14 @@ class EnhancedAIReasoningService:
         # Use detected language from context if no explicit language provided
         if language == "en" and inferred_context:
             detected_lang = inferred_context.get('detected_language', 'en')
-            if detected_lang in ['hi', 'hinglish']:
+            if detected_lang in ['hi', 'hinglish', 'gu']:
                 language = detected_lang
                 logger.info(f"Using detected language: {language}")
+        
+        # For Gujarati, always use enhanced Gujarati response
+        if language == "gu":
+            logger.info("Using enhanced Gujarati response for all food questions")
+            return await self._generate_enhanced_gujarati_response(user_input, inferred_context)
         
         # Extract context for emphasis adjustment
         context_type = None
@@ -211,6 +216,123 @@ Inferred context for emphasis adjustment:
             parsed[field] = defaults.get(field, 'Not available')
         
         return json.dumps(parsed, ensure_ascii=False)
+    
+    async def _generate_enhanced_gujarati_response(self, user_input: str, inferred_context: Optional[Dict[str, Any]] = None) -> str:
+        """Generate comprehensive Gujarati response for all food-related questions"""
+        try:
+            # Build enhanced Gujarati prompt with strict language enforcement
+            gujarati_prompt = f"""
+User question: "{user_input}"
+
+IMPORTANT: You MUST respond ONLY in Gujarati script (ગુજરાતી). Do NOT use English words or script anywhere in your response content.
+
+Provide detailed analysis in Gujarati following this exact JSON structure:
+{{
+  "ai_insight_title": "Brief title in Gujarati only",
+  "quick_verdict": "Detailed summary in Gujarati only - explain what this food is and its overall impact",
+  "why_this_matters": [
+    "Detailed explanation 1 in Gujarati with biological/nutritional reasoning",
+    "Detailed explanation 2 in Gujarati with health mechanisms",
+    "Detailed explanation 3 in Gujarati with practical implications"
+  ],
+  "trade_offs": {{
+    "positives": [
+      "Positive aspect 1 in Gujarati with detailed explanation",
+      "Positive aspect 2 in Gujarati with health benefits",
+      "Positive aspect 3 in Gujarati with nutritional value"
+    ],
+    "negatives": [
+      "Concern 1 in Gujarati with detailed explanation",
+      "Concern 2 in Gujarati with health implications"
+    ]
+  }},
+  "uncertainty": "Detailed explanation in Gujarati about individual variations and factors",
+  "ai_advice": "Comprehensive practical advice in Gujarati for making informed decisions"
+}}
+
+Remember: Every single word in the response values must be in Gujarati script. Be comprehensive and educational.
+"""
+            
+            # Use Gemini with very strict Gujarati-only system instruction
+            system_instruction = """You are a nutrition expert who responds ONLY in Gujarati script (ગુજરાતી). 
+NEVER use English words or Roman script in your response content. 
+All content must be in Gujarati script only. 
+Provide detailed, educational responses about food and nutrition in Gujarati.
+If you don't know the Gujarati word for something, describe it in Gujarati rather than using English."""
+            
+            response = await self.gemini.generate_text(
+                prompt=gujarati_prompt,
+                system_instruction=system_instruction,
+                temperature=0.2  # Lower temperature for more consistent language adherence
+            )
+            
+            # Clean and validate the response
+            cleaned_response = self._clean_json_response(response.strip())
+            
+            # Try to parse and validate
+            try:
+                parsed = json.loads(cleaned_response)
+                # Ensure all content is in Gujarati by checking for English characters
+                if self._contains_english_content(parsed):
+                    logger.warning("Generated response contains English, using fallback")
+                    return self._generate_gujarati_fallback(user_input)
+                return json.dumps(parsed, ensure_ascii=False)
+            except json.JSONDecodeError:
+                logger.warning("JSON parsing failed, using fallback")
+                return self._generate_gujarati_fallback(user_input)
+                
+        except Exception as e:
+            logger.error(f"Enhanced Gujarati response generation failed: {str(e)}")
+            return self._generate_gujarati_fallback(user_input)
+    
+    def _contains_english_content(self, parsed_response: dict) -> bool:
+        """Check if response contains English content"""
+        import re
+        english_pattern = re.compile(r'[a-zA-Z]{3,}')  # 3+ consecutive English letters
+        
+        def check_value(value):
+            if isinstance(value, str):
+                return bool(english_pattern.search(value))
+            elif isinstance(value, list):
+                return any(check_value(item) for item in value)
+            elif isinstance(value, dict):
+                return any(check_value(v) for v in value.values())
+            return False
+        
+        # Check all content fields (skip JSON keys)
+        content_fields = ['ai_insight_title', 'quick_verdict', 'why_this_matters', 'trade_offs', 'uncertainty', 'ai_advice']
+        for field in content_fields:
+            if field in parsed_response and check_value(parsed_response[field]):
+                return True
+        return False
+    
+    def _generate_gujarati_fallback(self, user_input: str) -> str:
+        """Generate fallback Gujarati response for any food question"""
+        # Create a comprehensive fallback response in Gujarati
+        response = {
+            "ai_insight_title": "ખોરાક વિશ્લેષણ",
+            "quick_verdict": "આ ખોરાક વિશે વિસ્તૃત માહિતી આપવા માટે હું તૈયાર છું. દરેક ખોરાકમાં વિવિધ પોષક તત્વો, વિટામિન્સ અને મિનરલ્સ હોય છે જે આપણા સ્વાસ્થ્ય પર અલગ અલગ અસર કરે છે.",
+            "why_this_matters": [
+                "દરેક ખોરાકમાં પ્રોટીન, કાર્બોહાઇડ્રેટ, ફેટ, વિટામિન્સ અને મિનરલ્સ હોય છે જે શરીરની વિવિધ જરૂરિયાતો પૂરી કરે છે અને મેટાબોલિઝમ, એનર્જી પ્રોડક્શન અને સેલ્યુલર ફંક્શન્સ માટે જરૂરી છે",
+                "ખોરાકની ગુણવત્તા, બનાવવાની પદ્ધતિ અને માત્રા આપણા પાચનતંત્ર, રોગપ્રતિકારક શક્તિ અને લાંબા ગાળાના સ્વાસ્થ્ય પર સીધી અસર કરે છે",
+                "સંતુલિત આહાર લેવાથી શરીરમાં હોર્મોન્સનું સંતુલન જાળવાય છે, બ્લડ સુગર કંટ્રોલ રહે છે અને હૃદય, મગજ અને અન્ય અંગોનું સ્વાસ્થ્ય સારું રહે છે"
+            ],
+            "trade_offs": {
+                "positives": [
+                    "પોષક તત્વો પ્રાપ્ત થાય છે - શરીરની દૈનિક જરૂરિયાતો પૂરી કરવા માટે વિટામિન્સ, મિનરલ્સ અને એનર્જી મળે છે",
+                    "સ્વાદ અને સંતૃપ્તિ - ખોરાક માત્ર પોષણ જ નહીં પરંતુ માનસિક સંતુષ્ટિ અને સાંસ્કૃતિક જોડાણ પણ આપે છે",
+                    "સામાજિક અને પારિવારિક બંધન - ખોરાક આપણી સંસ્કૃતિ, પરંપરા અને પારિવારિક મૂલ્યોનો ભાગ છે"
+                ],
+                "negatives": [
+                    "વધુ પડતું સેવન - કોઈ પણ ખોરાકનું અતિસેવન મોટાપા, ડાયાબિટીસ, હૃદયરોગ અને અન્ય સ્વાસ્થ્ય સમસ્યાઓનું કારણ બની શકે છે",
+                    "પ્રોસેસિંગ અને એડિટિવ્સ - પેકેજ્ડ અને પ્રોસેસ્ડ ફૂડમાં પ્રિઝર્વેટિવ્સ, આર્ટિફિશિયલ કલર્સ અને ફ્લેવર્સ હોઈ શકે છે"
+                ]
+            },
+            "uncertainty": "દરેક વ્યક્તિની ઉંમર, વજન, શારીરિક પ્રવૃત્તિ, આનુવંશિકતા, અને હાલની સ્વાસ્થ્યની સ્થિતિ અલગ હોવાથી ખોરાકની અસર અલગ અલગ હોઈ શકે છે. એલર્જી, ડાયાબિટીસ, હાઈ બીપી જેવી સ્થિતિઓ હોય તો વિશેષ સાવધાની જરૂરી છે.",
+            "ai_advice": "સંયમ સાથે વૈવિધ્યપૂર્ણ આહાર લો, ઘરે બનાવેલા તાજા ખોરાકને પ્રાધાન્ય આપો, પૂરતું પાણી પીવો, નિયમિત વ્યાયામ કરો અને જો કોઈ ખાસ સ્વાસ્થ્ય સમસ્યા હોય તો ડૉક્ટર અથવા પોષણ વિશેષજ્ઞની સલાહ લો."
+        }
+        
+        return json.dumps(response, ensure_ascii=False)
     
     def _generate_fallback_response(self, user_input: str, language: str) -> str:
         """Generate structured fallback response when main reasoning fails"""

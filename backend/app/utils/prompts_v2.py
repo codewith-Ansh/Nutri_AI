@@ -285,6 +285,8 @@ def build_enhanced_system_prompt(language: str = "en", context: str = None) -> s
         base_prompt += "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond in Hindi (Devanagari script). Translate ALL content to Hindi while keeping JSON field names in English. Preserve all mechanism-level reasoning depth."
     elif language == "hinglish":
         base_prompt += "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond in Hinglish (Hindi written in English script). Translate ALL content to Hinglish while keeping JSON field names in English. Preserve all mechanism-level reasoning depth."
+    elif language == "gu":
+        base_prompt += "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond ONLY in Gujarati (ગુજરાતી script). Translate ALL content to Gujarati while keeping JSON field names in English. Provide detailed, comprehensive analysis for ANY food-related question. Be educational and informative, not just keyword-based. Cover nutritional benefits, health implications, preparation methods, and practical advice. Preserve all mechanism-level reasoning depth."
     
     # Add context-specific emphasis
     if context == "parent":

@@ -5,7 +5,8 @@ import type { Language } from "@/hooks/useLanguage";
 const languages: Array<{ code: Language; label: string }> = [
   { code: "en" as const, label: "EN" },
   { code: "hi" as const, label: "हिंदी" },
-  { code: "hinglish" as const, label: "Hinglish" }
+  { code: "hinglish" as const, label: "Hinglish" },
+  { code: "gu" as const, label: "ગુજરાતી" }
 ];
 
 export const LanguageToggle = () => {

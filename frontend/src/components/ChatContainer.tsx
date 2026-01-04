@@ -158,7 +158,7 @@ export const ChatContainer = () => {
         variant: "destructive",
       });
     }
-  }, []);
+  }, [language]);
 
   const handleImageSelect = useCallback(async (file: File) => {
     // 1. Create optimistic message with image
@@ -225,7 +225,7 @@ export const ChatContainer = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [language]);
 
   const handleCameraAnalysis = useCallback(async (analysis: string) => {
     //Live camera returns JSON string from backend, parse it like image upload
@@ -263,7 +263,7 @@ export const ChatContainer = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [language]);
 
   const handleSend = useCallback((message: string) => {
     if (message.trim()) {
