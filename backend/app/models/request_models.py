@@ -17,6 +17,7 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, description="User message")
     session_id: Optional[str] = Field(None, description="Session ID for maintaining context")
     context: Optional[dict] = Field(None, description="Additional context")
+    language: Optional[str] = Field("en", description="Response language: en, hi, hinglish")
     
     @validator('message')
     def validate_message(cls, v):
@@ -28,3 +29,4 @@ class ImageUploadMetadata(BaseModel):
     """Metadata for image upload"""
     session_id: Optional[str] = Field(None, description="Session ID")
     include_raw_text: bool = Field(False, description="Include raw OCR text in response")
+    language: Optional[str] = Field("en", description="Response language: en, hi, hinglish")

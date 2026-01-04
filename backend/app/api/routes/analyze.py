@@ -1,10 +1,11 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from app.models.request_models import TextAnalysisRequest
 from app.services.image_services import image_service
 from app.services.reasoning_service_v2 import ai_native_reasoning
 from app.services.intent_service import ai_native_intent
 from app.utils.session_manager import session_manager
 from app.core.exceptions import NutriAIException
+from typing import Optional
 import logging
 
 logger = logging.getLogger(__name__)
@@ -57,7 +58,10 @@ async def analyze_text_ai_native(request: TextAnalysisRequest):
         raise HTTPException(status_code=500, detail="I'm having trouble right now. Could you try again?")
 
 @router.post("/analyze/image")
-async def analyze_image_ai_native(file: UploadFile = File(...)):
+async def analyze_image_ai_native(
+    file: UploadFile = File(...),
+    language: Optional[str] = Form("en")
+):
     """AI-native image analysis with product recognition from barcodes and ingredients"""
     try:
         logger.info(f"Image upload received: {file.filename}, size: {file.size}, type: {file.content_type}")
@@ -89,7 +93,8 @@ async def analyze_image_ai_native(file: UploadFile = File(...)):
         logger.info("Starting image analysis")
         reasoning_response = await ai_native_reasoning.analyze_from_image(
             image_data=image_data,
-            inferred_context=inferred_context
+            inferred_context=inferred_context,
+            language=language or "en"
         )
         logger.info("Image analysis completed successfully")
         

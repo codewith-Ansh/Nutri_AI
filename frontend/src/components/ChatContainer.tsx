@@ -5,6 +5,7 @@ import { TypingIndicator } from "./TypingIndicator";
 import { WelcomeMessage } from "./WelcomeMessage";
 import { toast } from "@/hooks/use-toast";
 import { generateNaturalFollowUps } from "@/lib/aiUtils";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface Message {
   role: "user" | "assistant";
@@ -30,6 +31,7 @@ export const ChatContainer = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const language = useLanguage();
 
   useEffect(() => {
     if (scrollContainerRef.current) {
@@ -52,7 +54,8 @@ export const ChatContainer = () => {
         },
         body: JSON.stringify({
           message: userMessage,
-          session_id: sessionId
+          session_id: sessionId,
+          language: language
         }),
       });
 
@@ -173,6 +176,7 @@ export const ChatContainer = () => {
       // 2. Upload to backend
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('language', language);
 
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/analyze/image`, {
         method: 'POST',

@@ -1,6 +1,7 @@
 import { Share2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/LanguageToggle";
 
 interface HeaderProps {
   onClearChat?: () => void;
@@ -24,7 +25,8 @@ export const Header = ({ onClearChat, onShare }: HeaderProps) => {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <LanguageToggle />
           <ThemeToggle />
 
           {onShare && (

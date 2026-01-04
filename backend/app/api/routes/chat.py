@@ -43,7 +43,8 @@ async def chat_stream_ai_native(request: ChatRequest):
         reasoning_response = await ai_native_reasoning.analyze_from_text(
             user_input=request.message,
             inferred_context=inferred_context,
-            conversation_history=history[-3:] if history else None
+            conversation_history=history[-3:] if history else None,
+            language=request.language or "en"
         )
         
         # Update session context

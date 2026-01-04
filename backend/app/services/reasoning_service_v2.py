@@ -18,7 +18,8 @@ class AINativeReasoningService:
         self,
         user_input: str,
         inferred_context: Optional[Dict[str, Any]] = None,
-        conversation_history: Optional[List[Dict[str, str]]] = None
+        conversation_history: Optional[List[Dict[str, str]]] = None,
+        language: str = "en"
     ) -> str:
         """Generate reasoning-driven response from text input"""
         
@@ -27,6 +28,13 @@ class AINativeReasoningService:
         if curated_response:
             logger.info(f"Using curated response for: {curated_response.get('_food', 'unknown')}")
             return json.dumps(curated_response, ensure_ascii=False)
+        
+        # Use detected language from context if no explicit language provided
+        if language == "en" and inferred_context:
+            detected_lang = inferred_context.get('detected_language', 'en')
+            if detected_lang in ['hi', 'hinglish']:
+                language = detected_lang
+                logger.info(f"Using detected language: {language}")
         
         # Otherwise, use LLM reasoning
         try:
@@ -55,11 +63,20 @@ Inferred context:
                     for msg in recent_msgs
                 ])
             
+            # Build language instruction
+            language_instruction = ""
+            if language == "hi":
+                language_instruction = "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond in Hindi (Devanagari script). Translate ALL content to Hindi while keeping JSON field names in English. Example: 'quick_verdict': 'यह स्वादिष्ट है लेकिन रोज़ाना खाने के लिए उपयुक्त नहीं है।'"
+            elif language == "hinglish":
+                language_instruction = "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond in Hinglish (Hindi written in English script). Translate ALL content to Hinglish while keeping JSON field names in English. Example: 'quick_verdict': 'Ye tasty hai lekin daily khane ke liye ideal nahi hai.'"
+            else:
+                language_instruction = "\n\nRespond in English."
+            
             # Enhanced prompt with better food recognition
             prompt = f"""
 User question: "{user_input}"
 {context_info}
-{history_context}
+{history_context}{language_instruction}
 
 Provide a direct, focused answer to the user's specific question. Be concise and helpful.
 
@@ -84,7 +101,7 @@ Be direct and helpful.
             
             response = await self.gemini.generate_text(
                 prompt=prompt,
-                system_instruction=REASONING_SYSTEM_PROMPT,
+                system_instruction=REASONING_SYSTEM_PROMPT + language_instruction,
                 temperature=0.4
             )
             
@@ -119,7 +136,8 @@ Be direct and helpful.
     async def analyze_from_image(
         self,
         image_data: bytes,
-        inferred_context: Optional[Dict[str, Any]] = None
+        inferred_context: Optional[Dict[str, Any]] = None,
+        language: str = "en"
     ) -> str:
         """Generate reasoning-driven response from image with product recognition"""
         try:
@@ -139,8 +157,14 @@ Be direct and helpful.
             image = Image.open(io.BytesIO(image_data))
             logger.info(f"Image loaded: {image.size} pixels")
             
-            # Use structured prompt for consistent JSON output
+            # Use structured prompt for consistent JSON output with language support
             prompt = VISUAL_CONTEXT_PROMPT
+            if language == "hi":
+                prompt += "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond in Hindi (Devanagari script). Translate ALL content to Hindi while keeping JSON field names in English."
+            elif language == "hinglish":
+                prompt += "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond in Hinglish (Hindi written in English script). Translate ALL content to Hinglish while keeping JSON field names in English."
+            else:
+                prompt += "\n\nRespond in English."
             
             # Generate response with image
             logger.info("Calling Gemini Vision API")

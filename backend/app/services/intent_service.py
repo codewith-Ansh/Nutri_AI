@@ -44,6 +44,9 @@ class AINativeIntentService:
     ) -> Dict[str, any]:
         """Softly infer user context without being certain"""
         try:
+            # Detect language from message
+            detected_language = self._detect_language(message)
+            
             # Format recent messages
             recent_msgs = ""
             if recent_history:
@@ -81,16 +84,48 @@ class AINativeIntentService:
                     response_clean = response_clean.replace('```json', '').replace('```', '')
                 
                 context_data = json.loads(response_clean)
+                # Add detected language to context
+                context_data['detected_language'] = detected_language
                 logger.info(f"Softly inferred context for session {session_id}: {context_data.get('likely_goal', 'unclear')}")
                 return context_data
             except (json.JSONDecodeError, ValueError) as e:
                 logger.warning(f"JSON parse failed: {e}")
-                # Return default uncertain context
-                return self._default_uncertain_context()
+                # Return default uncertain context with detected language
+                default_context = self._default_uncertain_context()
+                default_context['detected_language'] = detected_language
+                return default_context
                 
         except Exception as e:
             logger.error(f"Context inference error: {str(e)}")
-            return self._default_uncertain_context()
+            default_context = self._default_uncertain_context()
+            default_context['detected_language'] = self._detect_language(message)
+            return default_context
+    
+    def _detect_language(self, message: str) -> str:
+        """Detect language from user message"""
+        import re
+        
+        # Check for Devanagari script (Hindi)
+        if re.search(r'[\u0900-\u097F]', message):
+            return "hi"
+        
+        # Check for common Hinglish patterns
+        hinglish_words = [
+            'hai', 'hain', 'kya', 'kaisa', 'kaise', 'acha', 'achha', 'theek', 'thik',
+            'nahi', 'nahin', 'haan', 'han', 'koi', 'kuch', 'sab', 'sabse', 'mein',
+            'main', 'aur', 'ya', 'phir', 'wala', 'wali', 'wale', 'ke', 'ki', 'ka',
+            'se', 'mein', 'par', 'pe', 'ko', 'ne', 'toh', 'to', 'bhi', 'hi'
+        ]
+        
+        message_lower = message.lower()
+        hinglish_count = sum(1 for word in hinglish_words if word in message_lower)
+        
+        # If 2+ Hinglish words found, likely Hinglish
+        if hinglish_count >= 2:
+            return "hinglish"
+        
+        # Default to English
+        return "en"
     
     def _extract_mentioned_ingredients(self, message: str) -> List[str]:
         """Extract any ingredients mentioned in message (simple keyword matching)"""
