@@ -34,7 +34,7 @@ export const Header = ({ onClearChat, onShare }: HeaderProps) => {
               variant="ghost"
               size="sm"
               onClick={onShare}
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-primary hover:bg-muted"
+              className="h-10 w-10 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-primary hover:bg-muted"
             >
               <Share2 className="h-4 w-4" />
             </Button>
@@ -44,7 +44,7 @@ export const Header = ({ onClearChat, onShare }: HeaderProps) => {
               variant="ghost"
               size="sm"
               onClick={onClearChat}
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-muted"
+              className="h-10 w-10 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-muted"
             >
               <Trash2 className="h-4 w-4" />
             </Button>

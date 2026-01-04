@@ -3,14 +3,20 @@ import { Bot, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatAIResponse } from "@/lib/aiUtils";
 import { StructuredResponse } from "./StructuredResponse";
+import { MessageActions } from "./MessageActions";
 
 interface ChatMessageProps {
+  messageId: string;
   role: "user" | "assistant";
   content: string;
-  image?: string; // Add support for image URL
+  image?: string;
+  language?: string;
   isStreaming?: boolean;
   structuredData?: any;
   onFollowUpClick?: (question: string) => void;
+  onEdit?: () => void;
+  onSpeak?: (messageId: string) => void;
+  isSpeaking?: boolean;
 }
 
 // Helper to parse JSON from AI response
@@ -33,12 +39,17 @@ const tryParseStructuredResponse = (content: string) => {
 };
 
 export const ChatMessage = ({
+  messageId,
   role,
   content,
   image,
+  language,
   structuredData,
   onFollowUpClick,
-  isStreaming
+  isStreaming,
+  onEdit,
+  onSpeak,
+  isSpeaking
 }: ChatMessageProps) => {
   const isUser = role === "user";
 
@@ -80,7 +91,7 @@ export const ChatMessage = ({
 
   return (
     <div className={cn(
-      "flex gap-3 py-3",
+      "flex gap-3 py-3 group",
       isUser ? "justify-end" : "justify-start"
     )}>
       {!isUser && (
@@ -90,15 +101,17 @@ export const ChatMessage = ({
       )}
 
       <div className={cn(
-        "max-w-[85%]",
+        "max-w-[90%] sm:max-w-[85%] lg:max-w-[75%]",
         isUser ? "order-first" : ""
       )}>
         {/* Message Bubble */}
         <div className={cn(
-          "relative px-4 py-2.5 rounded-2xl shadow-sm text-sm border transition-colors duration-200",
+          "relative px-3 py-2 sm:px-4 sm:py-2.5 rounded-2xl shadow-sm text-sm border transition-all duration-200",
           isUser
             ? "bg-primary text-primary-foreground border-primary"
-            : "bg-card text-foreground border-border"
+            : isSpeaking
+              ? "bg-primary/10 border-primary ring-2 ring-primary/30"
+              : "bg-card text-foreground border-border"
         )}>
           {/* Image Attachment */}
           {image && (
@@ -106,7 +119,7 @@ export const ChatMessage = ({
               <img
                 src={image}
                 alt="Uploaded food label"
-                className="w-full max-w-[280px] h-auto object-cover block"
+                className="w-full max-w-[200px] sm:max-w-[250px] lg:max-w-[280px] h-auto object-cover block"
               />
             </div>
           )}
@@ -137,6 +150,22 @@ export const ChatMessage = ({
         </div>
         {isStreaming && (
           <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1 text-primary" />
+        )}
+
+        {/* Message Actions */}
+        {!isStreaming && (
+          <div className="flex justify-end mt-1">
+            <MessageActions
+              content={content}
+              structuredData={structuredData}
+              role={role}
+              language={language}
+              messageId={messageId}
+              onEdit={role === "user" ? onEdit : undefined}
+              onSpeak={role === "assistant" ? onSpeak : undefined}
+              isSpeaking={isSpeaking}
+            />
+          </div>
         )}
       </div>
 

@@ -276,17 +276,112 @@ Note: Adjust emphasis and framing ONLY. Never change JSON structure.
 """
 
 # Enhanced system prompt builder
-def build_enhanced_system_prompt(language: str = "en", context: str = None) -> str:
-    """Build enhanced system prompt with language and context awareness"""
+def detect_explicit_language_request(message: str) -> str | None:
+    """Detect if user explicitly requests a specific output language"""
+    message_lower = message.lower()
+    
+    # English requests
+    if any(phrase in message_lower for phrase in [
+        "answer in english", "reply in english", "respond in english",
+        "answer in hindi", "reply in hindi", "respond in hindi",
+        "answer in gujarati", "reply in gujarati", "respond in gujarati",
+        "answer in hinglish", "reply in hinglish", "respond in hinglish"
+    ]):
+        if "hindi" in message_lower and "hinglish" not in message_lower:
+            return "hi"
+        elif "hinglish" in message_lower:
+            return "hinglish"
+        elif "gujarati" in message_lower:
+            return "gu"
+        elif "english" in message_lower:
+            return "en"
+    
+    # Hindi/Gujarati explicit requests
+    if any(phrase in message for phrase in [
+        "हिंदी में जवाब", "हिन्दी में जवाब", "हिंदी में बताओ",
+        "ગુજરાતીમાં જવાબ", "ગુજરાતી માં જવાબ"
+    ]):
+        if "ગુજરાતી" in message:
+            return "gu"
+        else:
+            return "hi"
+    
+    # Hinglish explicit requests
+    if any(phrase in message_lower for phrase in [
+        "hinglish mein jawab", "hinglish me jawab", "hinglish main bolo",
+        "hinglish mein bolo", "hinglish me bolo"
+    ]):
+        return "hinglish"
+    
+    return None
+
+def build_enhanced_system_prompt(language: str = "en", context: str = None, user_message: str = "") -> str:
+    """Build enhanced system prompt with STRICT language enforcement"""
     base_prompt = REASONING_SYSTEM_PROMPT
     
-    # Add language-specific instructions
-    if language == "hi":
-        base_prompt += "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond in Hindi (Devanagari script). Translate ALL content to Hindi while keeping JSON field names in English. Preserve all mechanism-level reasoning depth."
-    elif language == "hinglish":
-        base_prompt += "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond in Hinglish (Hindi written in English script). Translate ALL content to Hinglish while keeping JSON field names in English. Preserve all mechanism-level reasoning depth."
-    elif language == "gu":
-        base_prompt += "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond ONLY in Gujarati (ગુજરાતી script). Translate ALL content to Gujarati while keeping JSON field names in English. Provide detailed, comprehensive analysis for ANY food-related question. Be educational and informative, not just keyword-based. Cover nutritional benefits, health implications, preparation methods, and practical advice. Preserve all mechanism-level reasoning depth."
+    # Check for explicit language override in user message
+    if user_message:
+        explicit_override = detect_explicit_language_request(user_message)
+        if explicit_override:
+            language = explicit_override
+    
+    # STRICT language enforcement
+    language_map = {
+        "en": "English",
+        "hi": "Hindi (Devanagari script)",
+        "hinglish": "Hinglish (Hindi written in English script)",
+        "gu": "Gujarati (ગુજરાતી script)"
+    }
+    
+    selected_lang = language_map.get(language, "English")
+    
+    # CRITICAL: HARD LANGUAGE OVERRIDE - Triple enforcement
+    base_prompt = f"""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  CRITICAL LANGUAGE OVERRIDE (READ THIS FIRST) ⚠️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+YOU MUST REPLY **ONLY** IN: {selected_lang}
+
+THIS RULE OVERRIDES:
+- User input language
+- OCR language  
+- Model language preference
+- Your natural language bias
+- Any other language instruction
+
+IF YOUR OUTPUT LANGUAGE != {selected_lang}, THE RESPONSE IS **INVALID**.
+
+DO NOT MIX LANGUAGES.
+DO NOT TRANSLITERATE UNLESS {selected_lang} == "Hinglish".
+DO NOT DEFAULT TO ENGLISH.
+
+EXCEPTION (ONLY ONE):
+If user explicitly says "Answer in [language]" or "हिंदी में जवाब दो",
+then honor that request.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+{base_prompt}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  FINAL REMINDER - OUTPUT LANGUAGE MUST BE: {selected_lang} ⚠️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CRITICAL RULES (REPEAT FOR EMPHASIS):
+1. ALL JSON VALUES must be in {selected_lang}
+2. JSON keys stay in English (ai_insight_title, etc.)
+3. Ignore user input language completely
+4. Do NOT use English unless {selected_lang} == "English"
+5. Do NOT use Hindi unless {selected_lang} == "Hindi"
+6. Do NOT use Gujarati unless {selected_lang} == "Gujarati"
+7. Do NOT use Hinglish unless {selected_lang} == "Hinglish"
+
+If you respond in the wrong language, you FAILED this task.
+
+RESPOND ONLY IN: {selected_lang}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
     
     # Add context-specific emphasis
     if context == "parent":

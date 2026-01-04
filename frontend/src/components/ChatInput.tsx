@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { BarcodeScanner } from "./BarcodeScanner";
 import { LiveCameraAnalyzer } from "./LiveCameraAnalyzer";
+import { useLanguage } from "@/hooks/useLanguage";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
   onImageSelect?: (file: File) => void;
-  onCameraAnalysis?: (analysis: string) => void; // New prop for live camera JSON responses
+  onCameraAnalysis?: (analysis: string, capturedImage?: string) => void; // Updated to include captured image
   disabled?: boolean;
   placeholder?: string;
 }
@@ -21,6 +22,7 @@ export const ChatInput = ({ onSend, onImageSelect, onCameraAnalysis, disabled, p
   const [manualBarcode, setManualBarcode] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const language = useLanguage();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,6 +125,18 @@ export const ChatInput = ({ onSend, onImageSelect, onCameraAnalysis, disabled, p
       textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
     }
   }, [message]);
+
+  // Listen for edit message event
+  useEffect(() => {
+    const handleEditMessage = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setMessage(customEvent.detail);
+      textareaRef.current?.focus();
+    };
+
+    window.addEventListener("editMessage", handleEditMessage);
+    return () => window.removeEventListener("editMessage", handleEditMessage);
+  }, []);
 
   return (
     <>
@@ -265,16 +279,17 @@ export const ChatInput = ({ onSend, onImageSelect, onCameraAnalysis, disabled, p
       {/* Live Camera Analyzer Modal */}
       {showLiveCamera && (
         <LiveCameraAnalyzer
-          onAnalysisComplete={(analysis) => {
+          onAnalysisComplete={(analysis, capturedImage) => {
             // Use camera-specific handler if available, otherwise fallback to onSend
             if (onCameraAnalysis) {
-              onCameraAnalysis(analysis);
+              onCameraAnalysis(analysis, capturedImage);
             } else {
               onSend(analysis);
             }
             setShowLiveCamera(false);
           }}
           onClose={() => setShowLiveCamera(false)}
+          language={language}
         />
       )}
     </>

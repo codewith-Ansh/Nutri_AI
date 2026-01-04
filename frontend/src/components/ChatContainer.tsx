@@ -6,12 +6,13 @@ import { WelcomeMessage } from "./WelcomeMessage";
 import { toast } from "@/hooks/use-toast";
 import { generateNaturalFollowUps } from "@/lib/aiUtils";
 import { useLanguage } from "@/hooks/useLanguage";
-import { jwtService } from "@/lib/jwtService";
+
 
 interface Message {
   role: "user" | "assistant";
   content: string;
   image?: string;
+  language?: string;
   structuredData?: {
     ai_insight_title: string;
     quick_verdict: string;
@@ -44,6 +45,8 @@ export const ChatContainer = () => {
   });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const language = useLanguage();
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
 
   useEffect(() => {
     if (scrollContainerRef.current) {
@@ -55,9 +58,7 @@ export const ChatContainer = () => {
     localStorage.setItem('nutri_chat_messages', JSON.stringify(messages));
   }, [messages]);
 
-  useEffect(() => {
-    jwtService.ensureValidToken();
-  }, []);
+
 
   const streamChat = useCallback(async (userMessage: string) => {
     const userMsg: Message = { role: "user", content: userMessage };
@@ -65,11 +66,11 @@ export const ChatContainer = () => {
     setIsLoading(true);
 
     try {
-      await jwtService.ensureValidToken();
-
       const resp = await fetch(CHAT_URL, {
         method: "POST",
-        headers: jwtService.getAuthHeaders(),
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           message: userMessage,
           session_id: sessionId,
@@ -183,7 +184,7 @@ export const ChatContainer = () => {
     const imageUrl = URL.createObjectURL(file);
     const userMsg: Message = {
       role: "user",
-      content: "Analyzing this product...",
+      content: "",  // Empty content, let the image speak for itself
       image: imageUrl
     };
 
@@ -198,9 +199,6 @@ export const ChatContainer = () => {
 
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/analyze/image`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${jwtService.getToken()}`
-        },
         body: formData
       });
 
@@ -248,12 +246,22 @@ export const ChatContainer = () => {
     }
   }, [language]);
 
-  const handleCameraAnalysis = useCallback(async (analysis: string) => {
-    //Live camera returns JSON string from backend, parse it like image upload
+  const handleCameraAnalysis = useCallback(async (analysis: string, capturedImage?: string) => {
+    // 1. FIRST: Show the captured image as a user message (if we have it)
+    if (capturedImage) {
+      const userMsg: Message = {
+        role: "user",
+        content: "",  // Empty content, let the image speak for itself
+        image: capturedImage
+      };
+      setMessages(prev => [...prev, userMsg]);
+    }
+
+    // 2. THEN: Show loading
     setIsLoading(true);
 
     try {
-      // Try parsing JSON if it's a string
+      // 3. Parse the analysis
       let structuredData;
       try {
         structuredData = typeof analysis === 'string'
@@ -263,6 +271,7 @@ export const ChatContainer = () => {
         console.error("Failed to parse camera analysis JSON", e);
       }
 
+      // 4. FINALLY: Show AI response as assistant message
       const assistantMsg: Message = {
         role: "assistant",
         content: "",
@@ -284,7 +293,7 @@ export const ChatContainer = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [language]);
+  }, []);
 
   const handleSend = useCallback((message: string) => {
     if (message.trim()) {
@@ -296,6 +305,189 @@ export const ChatContainer = () => {
   const handleFollowUpSelect = useCallback((question: string) => {
     handleSend(question);
   }, [handleSend]);
+
+  // Speech helper functions
+  const getVoiceForLanguage = useCallback((lang: string): string => {
+    const voiceMap: Record<string, string> = {
+      'en': 'en-US',
+      'hi': 'hi-IN',
+      'hinglish': 'en-IN',
+      'gu': 'gu-IN'
+    };
+    return voiceMap[lang] || 'en-US';
+  }, []);
+
+  const cleanTextForSpeech = useCallback((text: string, structuredData?: any): string => {
+    if (structuredData) {
+      let cleanText = `${structuredData.quick_verdict}. `;
+      if (Array.isArray(structuredData.why_this_matters)) {
+        cleanText += `${structuredData.why_this_matters.join('. ')}. `;
+      }
+      if (structuredData.ai_advice) {
+        cleanText += `${structuredData.ai_advice}.`;
+      }
+      return cleanText;
+    }
+
+    return text
+      .replace(/[#*_`]/g, '')
+      .replace(/[\u{1F600}-\u{1F64F}]/gu, '')
+      .replace(/[\u{1F300}-\u{1F5FF}]/gu, '')
+      .replace(/[\u{1F680}-\u{1F6FF}]/gu, '')
+      .replace(/[\u{2600}-\u{26FF}]/gu, '')
+      .replace(/[\u{2700}-\u{27BF}]/gu, '')
+      .replace(/✓|✗|•/g, '')
+      .trim();
+  }, []);
+
+  const handleSpeak = useCallback(async (messageId: string) => {
+    const index = parseInt(messageId.replace('msg-', ''));
+    const message = messages[index];
+
+    if (!message || message.role !== "assistant") return;
+
+    const messageLang = message.language || language;
+
+    // GUJARATI SAFETY GUARD: Gujarati not supported in browser-only mode
+    if (messageLang === 'gu') {
+      toast({
+        title: "Speech not supported",
+        description: "Gujarati speech is not supported on this device",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
+
+    // Check browser support
+    if (!('speechSynthesis' in window)) {
+      toast({
+        title: "Speech not supported",
+        description: "Your browser doesn't support text-to-speech",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
+
+    // Stop currently playing speech
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      if (speakingMessageId === messageId) {
+        setIsSpeaking(false);
+        setSpeakingMessageId(null);
+        return;
+      }
+    }
+
+    try {
+      const cleanText = cleanTextForSpeech(message.content, message.structuredData);
+
+      if (!cleanText) {
+        toast({
+          title: "No text to speak",
+          variant: "destructive",
+          duration: 2000,
+        });
+        return;
+      }
+
+      const voiceLang = getVoiceForLanguage(messageLang);
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+
+      utterance.lang = voiceLang;
+      utterance.rate = 0.9;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+
+      // Wait for voices to load
+      let voices = window.speechSynthesis.getVoices();
+      if (voices.length === 0) {
+        await new Promise<void>((resolve) => {
+          window.speechSynthesis.onvoiceschanged = () => {
+            voices = window.speechSynthesis.getVoices();
+            resolve();
+          };
+          setTimeout(() => resolve(), 100);
+        });
+      }
+
+      // Explicitly select best matching voice
+      const availableVoices = window.speechSynthesis.getVoices();
+
+      // Try exact match first
+      let matchingVoice = availableVoices.find(voice => voice.lang === voiceLang);
+
+      // If no exact match, try language prefix (e.g., "hi" in "hi-IN")
+      if (!matchingVoice) {
+        const langPrefix = voiceLang.split('-')[0];
+        matchingVoice = availableVoices.find(voice =>
+          voice.lang.startsWith(langPrefix)
+        );
+      }
+
+      if (matchingVoice) {
+        utterance.voice = matchingVoice;
+      } else {
+        // No matching voice found
+        toast({
+          title: "Voice not available",
+          description: `${messageLang} voice not found on your device`,
+          variant: "destructive",
+          duration: 3000,
+        });
+        return;
+      }
+
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        setSpeakingMessageId(null);
+      };
+
+      utterance.onerror = (event) => {
+        console.error('Speech error:', event);
+        setIsSpeaking(false);
+        setSpeakingMessageId(null);
+      };
+
+      setIsSpeaking(true);
+      setSpeakingMessageId(messageId);
+      window.speechSynthesis.speak(utterance);
+
+    } catch (error) {
+      console.error('Speech synthesis error:', error);
+      setIsSpeaking(false);
+      setSpeakingMessageId(null);
+      toast({
+        title: "Speech failed",
+        description: "Failed to start speech synthesis",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
+  }, [messages, language, isSpeaking, speakingMessageId, getVoiceForLanguage, cleanTextForSpeech, toast]);
+
+  const handleEditMessage = useCallback((index: number) => {
+    const messageToEdit = messages[index];
+    if (messageToEdit.role === "user") {
+      // Remove all messages after this one (including AI responses)
+      setMessages(prev => prev.slice(0, index));
+
+      // Trigger a custom event to populate the input
+      window.dispatchEvent(new CustomEvent("editMessage", {
+        detail: messageToEdit.content
+      }));
+    }
+  }, [messages]);
+
+  // Cleanup: Stop speech on unmount
+  useEffect(() => {
+    return () => {
+      if (isSpeaking && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [isSpeaking]);
 
   return (
     <div className="flex flex-col h-full">
@@ -313,11 +505,17 @@ export const ChatContainer = () => {
               {messages.map((message, index) => (
                 <div key={index}>
                   <ChatMessage
+                    key={index}
+                    messageId={`msg-${index}`}
                     role={message.role}
                     content={message.content}
                     image={message.image}
+                    language={message.language}
                     structuredData={message.structuredData}
                     onFollowUpClick={handleFollowUpSelect}
+                    onEdit={message.role === "user" ? () => handleEditMessage(index) : undefined}
+                    onSpeak={message.role === "assistant" ? handleSpeak : undefined}
+                    isSpeaking={speakingMessageId === `msg-${index}`}
                     isStreaming={
                       isLoading &&
                       index === messages.length - 1 &&

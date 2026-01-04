@@ -3,11 +3,12 @@ import { Camera, X, Loader2, Scan, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface LiveCameraAnalyzerProps {
-    onAnalysisComplete: (analysis: string) => void;
+    onAnalysisComplete: (analysis: string, capturedImage?: string) => void;
     onClose: () => void;
+    language: string;
 }
 
-export const LiveCameraAnalyzer = ({ onAnalysisComplete, onClose }: LiveCameraAnalyzerProps) => {
+export const LiveCameraAnalyzer = ({ onAnalysisComplete, onClose, language }: LiveCameraAnalyzerProps) => {
     const [isStreaming, setIsStreaming] = useState(false);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [mode, setMode] = useState<'barcode' | 'product'>('product');
@@ -62,6 +63,7 @@ export const LiveCameraAnalyzer = ({ onAnalysisComplete, onClose }: LiveCameraAn
         if (!videoRef.current || !canvasRef.current) return;
 
         setIsAnalyzing(true);
+        let blob: Blob | null = null;
 
         try {
             // Capture current frame
@@ -77,7 +79,7 @@ export const LiveCameraAnalyzer = ({ onAnalysisComplete, onClose }: LiveCameraAn
             ctx.drawImage(video, 0, 0);
 
             // Convert to blob
-            const blob = await new Promise<Blob | null>((resolve) => {
+            blob = await new Promise<Blob | null>((resolve) => {
                 canvas.toBlob(resolve, 'image/jpeg', 0.95);
             });
 
@@ -95,7 +97,9 @@ export const LiveCameraAnalyzer = ({ onAnalysisComplete, onClose }: LiveCameraAn
 
         } catch (err) {
             console.error('Analysis error:', err);
-            onAnalysisComplete("I couldn't analyze the image. Please try again with better lighting.");
+            // Try to still show the captured image even if analysis fails
+            const imageUrl = blob ? URL.createObjectURL(blob) : undefined;
+            onAnalysisComplete("I couldn't analyze the image. Please try again with better lighting.", imageUrl);
             stopCamera();
             onClose();
         } finally {
@@ -164,9 +168,13 @@ export const LiveCameraAnalyzer = ({ onAnalysisComplete, onClose }: LiveCameraAn
 
     const analyzeProductMode = async (imageBlob: Blob) => {
         try {
+            // Convert blob to URL for UI display
+            const imageUrl = URL.createObjectURL(imageBlob);
+
             // Send to backend AI for analysis
             const formData = new FormData();
             formData.append('file', imageBlob, 'camera-capture.jpg');
+            formData.append('language', language || 'en');
 
             const response = await fetch(
                 `${import.meta.env.VITE_API_BASE_URL}/api/analyze/image`,
@@ -183,9 +191,9 @@ export const LiveCameraAnalyzer = ({ onAnalysisComplete, onClose }: LiveCameraAn
             const result = await response.json();
 
             if (result.success && result.analysis) {
-                onAnalysisComplete(result.analysis);
+                onAnalysisComplete(result.analysis, imageUrl);
             } else {
-                onAnalysisComplete("I couldn't analyze this clearly. Please try taking another photo with better lighting.");
+                onAnalysisComplete("I couldn't analyze this clearly. Please try taking another photo with better lighting.", imageUrl);
             }
         } catch (error) {
             console.error('Product analysis error:', error);

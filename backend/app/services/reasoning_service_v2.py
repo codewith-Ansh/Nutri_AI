@@ -84,7 +84,7 @@ Avoid shallow statements like "contains additives" or "effects vary by person".
 """
             
             # Use enhanced system prompt with language and context awareness
-            enhanced_system_prompt = build_enhanced_system_prompt(language, context_type)
+            enhanced_system_prompt = build_enhanced_system_prompt(language, context_type, user_input)
             
             response = await self.gemini.generate_text(
                 prompt=prompt,
@@ -410,7 +410,7 @@ If you don't know the Gujarati word for something, describe it in Gujarati rathe
             
             # Configure Gemini with vision model
             genai.configure(api_key=settings.GEMINI_API_KEY)
-            model = genai.GenerativeModel('gemini-2.5-flash')
+            model = genai.GenerativeModel(settings.GEMINI_MODEL)
             
             # Convert bytes to PIL Image
             image = Image.open(io.BytesIO(image_data))
@@ -444,13 +444,8 @@ Examples of good mechanism reasoning:
 Avoid shallow statements like "contains preservatives" or "has artificial ingredients".
 """
             
-            # Add language-specific instructions
-            if language == "hi":
-                enhanced_prompt += "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond in Hindi (Devanagari script). Translate ALL content to Hindi while keeping JSON field names in English. Preserve all mechanism-level reasoning depth."
-            elif language == "hinglish":
-                enhanced_prompt += "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond in Hinglish (Hindi written in English script). Translate ALL content to Hinglish while keeping JSON field names in English. Preserve all mechanism-level reasoning depth."
-            else:
-                enhanced_prompt += "\n\nRespond in English with full mechanism-based reasoning."
+            # Use the same strict language enforcement as text analysis
+            enhanced_system_prompt = build_enhanced_system_prompt(language, context_type, "")
             
             # Generate response with image
             logger.info("Calling Gemini Vision API with enhanced reasoning")
