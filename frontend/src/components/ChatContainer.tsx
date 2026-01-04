@@ -286,19 +286,20 @@ export const ChatContainer = () => {
           <div className="max-w-3xl mx-auto px-4 py-4">
             <div className="space-y-4">
               {messages.map((message, index) => (
-                <ChatMessage
-                  key={index}
-                  role={message.role}
-                  content={message.content}
-                  image={message.image}
-                  structuredData={message.structuredData}
-                  onFollowUpClick={handleFollowUpSelect}
-                  isStreaming={
-                    isLoading &&
-                    index === messages.length - 1 &&
-                    message.role === "assistant"
-                  }
-                />
+                <div key={index}>
+                  <ChatMessage
+                    role={message.role}
+                    content={message.content}
+                    image={message.image}
+                    structuredData={message.structuredData}
+                    onFollowUpClick={handleFollowUpSelect}
+                    isStreaming={
+                      isLoading &&
+                      index === messages.length - 1 &&
+                      message.role === "assistant"
+                    }
+                  />
+                </div>
               ))}
               {isLoading && messages[messages.length - 1]?.role === "user" && (
                 <TypingIndicator />

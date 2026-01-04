@@ -19,11 +19,11 @@ async def test_gemini():
             system_instruction="You are a helpful assistant. Answer in 1 sentence."
         )
         
-        print(f"✅ API Working! Response: {response}")
+        print(f"API Working! Response: {response}")
         return True
         
     except Exception as e:
-        print(f"❌ API Failed: {str(e)}")
+        print(f"API Failed: {str(e)}")
         return False
 
 if __name__ == "__main__":

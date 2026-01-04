@@ -21,16 +21,16 @@ async def test_image_analysis():
             inferred_context={"likely_goal": "product_identification"}
         )
         
-        print(f"✅ Image Analysis Response: {response}")
+        print(f"Image Analysis Response: {response}")
         return True
         
     except Exception as e:
-        print(f"❌ Image Analysis Failed: {str(e)}")
+        print(f"Image Analysis Failed: {str(e)}")
         return False
 
 if __name__ == "__main__":
     result = asyncio.run(test_image_analysis())
     if result:
-        print("\n✅ Image analysis system is working!")
+        print("\nImage analysis system is working!")
     else:
-        print("\n❌ Image analysis needs fixing")
+        print("\nImage analysis needs fixing")

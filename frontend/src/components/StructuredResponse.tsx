@@ -1,3 +1,4 @@
+import React from "react";
 import { CheckCircle, AlertTriangle, Info, Lightbulb, TrendingUp, TrendingDown } from "lucide-react";
 
 interface StructuredInsight {
