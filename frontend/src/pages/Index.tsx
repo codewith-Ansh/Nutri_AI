@@ -3,6 +3,8 @@ import { Header } from "@/components/Header";
 
 const Index = () => {
   const handleClearChat = () => {
+    localStorage.removeItem('nutri_chat_messages');
+    localStorage.removeItem('nutri_session_id');
     window.location.reload();
   };
 

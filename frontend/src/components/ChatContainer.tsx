@@ -6,6 +6,7 @@ import { WelcomeMessage } from "./WelcomeMessage";
 import { toast } from "@/hooks/use-toast";
 import { generateNaturalFollowUps } from "@/lib/aiUtils";
 import { useLanguage } from "@/hooks/useLanguage";
+import { jwtService } from "@/lib/jwtService";
 
 interface Message {
   role: "user" | "assistant";
@@ -27,9 +28,20 @@ interface Message {
 const CHAT_URL = `${import.meta.env.VITE_API_BASE_URL}/api/chat/stream`;
 
 export const ChatContainer = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const saved = localStorage.getItem('nutri_chat_messages');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
+  const [sessionId] = useState(() => {
+    let id = localStorage.getItem('nutri_session_id');
+    if (!id) {
+      id = `session_${Date.now()}`;
+      localStorage.setItem('nutri_session_id', id);
+    }
+    return id;
+  });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const language = useLanguage();
 
@@ -39,19 +51,25 @@ export const ChatContainer = () => {
     }
   }, [messages]);
 
+  useEffect(() => {
+    localStorage.setItem('nutri_chat_messages', JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    jwtService.ensureValidToken();
+  }, []);
+
   const streamChat = useCallback(async (userMessage: string) => {
     const userMsg: Message = { role: "user", content: userMessage };
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
 
     try {
-      const sessionId = "session_" + Date.now();
+      await jwtService.ensureValidToken();
 
       const resp = await fetch(CHAT_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: jwtService.getAuthHeaders(),
         body: JSON.stringify({
           message: userMessage,
           session_id: sessionId,
@@ -180,6 +198,9 @@ export const ChatContainer = () => {
 
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/analyze/image`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${jwtService.getToken()}`
+        },
         body: formData
       });
 
