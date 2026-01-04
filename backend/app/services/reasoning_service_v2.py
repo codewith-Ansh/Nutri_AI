@@ -1,8 +1,10 @@
 import logging
+import json
 from typing import List, Optional, Dict, Any
 from app.services.gemini_service import gemini_service
 from app.utils.prompts_v2 import REASONING_SYSTEM_PROMPT, VISUAL_CONTEXT_PROMPT
 from app.core.exceptions import LLMServiceError
+from app.data.curated_reasoning import get_curated_response
 
 logger = logging.getLogger(__name__)
 
@@ -19,12 +21,14 @@ class AINativeReasoningService:
         conversation_history: Optional[List[Dict[str, str]]] = None
     ) -> str:
         """Generate reasoning-driven response from text input"""
-        # First check if this is a common Indian food and provide immediate response
-        food_item = user_input.lower().strip()
-        # Only use fallback for very specific Indian foods to allow API to handle medical questions
-        if any(term in food_item for term in ['parle g', 'parle-g', 'vadapav', 'vada pav', 'samosa']):
-            return self._get_fallback_indian_food_response(food_item)
         
+        # First, check for curated responses (demo foods)
+        curated_response = get_curated_response(user_input)
+        if curated_response:
+            logger.info(f"Using curated response for: {curated_response.get('_food', 'unknown')}")
+            return json.dumps(curated_response, ensure_ascii=False)
+        
+        # Otherwise, use LLM reasoning
         try:
             # Build context-aware prompt
             context_info = ""
@@ -88,12 +92,29 @@ Be direct and helpful.
             
         except Exception as e:
             logger.error(f"Text reasoning failed: {str(e)}")
-            # Always return fallback response for any error (including quota exceeded)
-            fallback_response = self._get_fallback_indian_food_response(food_item)
-            if fallback_response != "I'd be happy to help with information about this food. What specifically would you like to know?":
-                return fallback_response
-            # If no specific fallback, provide general helpful response
-            return "I'm having some technical difficulties with the AI service right now. For common Indian foods like vadapav, samosa, Parle G, I can still help - just ask about them specifically!"
+            # Try curated response as fallback
+            curated_fallback = get_curated_response(user_input)
+            if curated_fallback:
+                logger.info("Using curated fallback due to LLM error")
+                return json.dumps(curated_fallback, ensure_ascii=False)
+            
+            # Return structured error response if all else fails
+            error_response = {
+                "ai_insight_title": "Temporary Service Issue",
+                "quick_verdict": "I'm having some technical difficulties with the AI service right now.",
+                "why_this_matters": [
+                    "The AI reasoning service is temporarily unavailable",
+                    "You can try asking about common foods or try again in a moment"
+                ],
+                "trade_offs": {
+                    "positives": ["Service interruption is temporary"],
+                    "negatives": ["Cannot provide detailed analysis at the moment"]
+                },
+                "uncertainty": "Service should be restored shortly. For common Indian foods, I may still be able to help.",
+                "ai_advice": "Please try your question again, or ask about specific foods like samosa, vadapav, or Parle G.",
+                "_source": "error_fallback"
+            }
+            return json.dumps(error_response, ensure_ascii=False)
     
     async def analyze_from_image(
         self,
@@ -112,46 +133,33 @@ Be direct and helpful.
             
             # Configure Gemini with vision model
             genai.configure(api_key=settings.GEMINI_API_KEY)
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel('gemini-2.5-flash')
             
             # Convert bytes to PIL Image
             image = Image.open(io.BytesIO(image_data))
             logger.info(f"Image loaded: {image.size} pixels")
             
-            prompt = """
-You are a food-label analysis assistant.
-
-The image contains a nutrition label and ingredient list from an Indian packaged food.
-
-Step 1: Extract all readable text from the image (ingredients + nutrition table).
-Step 2: Clean and structure it clearly.
-Step 3: Identify:
-- High sugar
-- Palm oil / trans fat
-- Excess sodium
-- Artificial additives
-Step 4: Give a short health summary (3–4 lines).
-
-If any text is unreadable, say so explicitly.
-
-Also look for any barcode numbers (usually 8-13 digits) and include them if visible.
-"""
+            # Use structured prompt for consistent JSON output
+            prompt = VISUAL_CONTEXT_PROMPT
             
             # Generate response with image
             logger.info("Calling Gemini Vision API")
             response = model.generate_content([prompt, image])
             
             result_text = response.text.strip()
+            # Clean md code blocks if present
+            if result_text.startswith("```json"):
+                result_text = result_text[7:]
+            if result_text.startswith("```"):
+                result_text = result_text[3:]
+            if result_text.endswith("```"):
+                result_text = result_text[:-3]
+            result_text = result_text.strip()
+
             logger.info("Gemini Vision analysis completed successfully")
             
-            # Check if barcode was detected and try to get product info
-            barcode = self._extract_barcode_from_response(result_text)
-            if barcode:
-                logger.info(f"Barcode detected: {barcode}")
-                product_info = await self._get_product_from_barcode(barcode)
-                if product_info:
-                    enhanced_result = f"{result_text}\n\n**Product Database Match:**\n{product_info}"
-                    return enhanced_result
+            # Note: We skip the secondary barcode lookup to preserve the structured JSON format
+            # The Vision API is powerful enough to read the label directly
             
             return result_text
             
@@ -252,103 +260,6 @@ Provide a helpful analysis of this food product.
         except Exception as e:
             logger.error(f"OpenFoodFacts lookup failed: {str(e)}")
             return None
-    
-    def _get_fallback_indian_food_response(self, food_item: str) -> str:
-        """Provide fallback responses for common Indian foods"""
-        # Detect health conditions
-        health_conditions = {
-            'diabetes': ['diabetes', 'diabetic', 'blood sugar', 'sugar level'],
-            'blood_pressure': ['blood pressure', 'hypertension', 'bp', 'high bp'],
-            'cholesterol': ['cholesterol', 'high cholesterol', 'ldl', 'hdl'],
-            'heart': ['heart disease', 'heart problem', 'cardiac'],
-            'weight': ['weight loss', 'obesity', 'overweight', 'fat loss']
-        }
-        
-        detected_condition = None
-        for condition, terms in health_conditions.items():
-            if any(term in food_item for term in terms):
-                detected_condition = condition
-                break
-        
-        # Log for debugging
-        logger.info(f"Food item: {food_item}, Detected condition: {detected_condition}")
-        
-        # Samosa responses (moved to top for priority)
-        if 'samosa' in food_item:
-            if detected_condition == 'cholesterol':
-                return "Samosas are deep-fried pastries with refined flour, which can raise bad cholesterol. The oil and trans fats aren't good for heart health. If you have high cholesterol, limit to very occasional consumption."
-            elif detected_condition == 'diabetes':
-                return "Samosas can spike blood sugar due to refined flour wrapper and potato filling. The deep-frying adds extra calories. If diabetic, have sparingly and check blood sugar after."
-            elif detected_condition == 'blood_pressure':
-                return "Samosas are high in sodium and deep-fried, which isn't ideal for blood pressure. The refined carbs and unhealthy fats can indirectly affect BP. Best avoided if you have hypertension."
-            else:
-                return "Samosas are deep-fried pastries with spiced filling. They're high in calories and refined carbs. Fine as an occasional snack but not regularly if you're health-conscious."
-        
-        # Vadapav responses
-        elif 'vadapav' in food_item or 'vada pav' in food_item:
-            if detected_condition == 'blood_pressure':
-                return "With high blood pressure, vadapav isn't ideal since it's deep-fried (high in unhealthy fats) and often contains salt. The refined carbs can also affect blood pressure indirectly. If you want to have it occasionally, consider sharing one or having it as part of a meal with vegetables."
-            elif detected_condition == 'diabetes':
-                return "With diabetes, vadapav can spike blood sugar due to refined flour in the pav and fried potato. If you have it, pair with protein/fiber and monitor your levels. Better as an occasional treat."
-            elif detected_condition == 'cholesterol':
-                return "Vadapav is deep-fried which increases bad cholesterol. The oil used for frying and refined carbs aren't heart-friendly. If you have high cholesterol, it's best avoided or had very rarely."
-            else:
-                return "Vadapav is a Mumbai street food - a spiced potato fritter in a bread roll. It's deep-fried and carb-heavy, so quite caloric but filling and flavorful. Consider it an occasional treat if you're watching your diet."
-        
-        # Parle G responses
-        elif 'parle g' in food_item or 'parle-g' in food_item:
-            if detected_condition == 'diabetes':
-                return "With diabetes, Parle G can cause blood sugar spikes since it contains refined flour and added sugar. If you want to have it, try 1-2 biscuits with a meal rather than alone, and monitor your blood sugar. Better to discuss portion sizes with your doctor."
-            else:
-                return "Parle G is a popular Indian glucose biscuit made with refined flour, sugar, and oil. It's a processed snack that gives quick energy but isn't very nutritious. Fine as an occasional treat with tea."
-        
-        # Other Indian foods
-        elif 'bhel puri' in food_item or 'pani puri' in food_item:
-            if detected_condition:
-                return "Street chaat like bhel puri/pani puri often has high sodium, refined carbs, and hygiene concerns. If you have health conditions, it's better to have homemade versions with less salt and oil."
-            else:
-                return "Bhel puri and pani puri are popular street snacks with puffed rice, chutneys, and spices. They're relatively light but can be high in sodium. Enjoy occasionally from clean vendors."
-        
-        elif 'dosa' in food_item:
-            if detected_condition == 'diabetes':
-                return "Plain dosa is better for diabetes than other options since it's fermented and has some protein. But avoid potato masala filling and coconut chutney. Pair with sambar for fiber."
-            else:
-                return "Dosa is a fermented crepe made from rice and lentils. It's relatively healthy, especially plain dosa. The fermentation adds probiotics and makes it easier to digest."
-        
-        elif 'maggi' in food_item or 'noodles' in food_item:
-            if detected_condition:
-                return "Instant noodles like Maggi are high in sodium, preservatives, and refined carbs. Not ideal for any health condition. If you must have it, use less masala and add vegetables."
-            else:
-                return "Maggi and instant noodles are processed foods high in sodium and preservatives. They're convenient but not nutritious. Better as an occasional quick meal."
-        
-        # Generic food responses for common queries
-        elif any(word in food_item for word in ['biscuit', 'cookie']):
-            if detected_condition == 'diabetes':
-                return "Most biscuits contain refined flour and sugar which can spike blood sugar. Look for sugar-free or whole grain options, and limit portion sizes."
-            else:
-                return "Most biscuits are made with refined flour, sugar, and oil. They're high in calories and low in nutrients. Fine as occasional treats."
-        
-        elif any(word in food_item for word in ['rice', 'biryani', 'pulao']):
-            if detected_condition == 'diabetes':
-                return "White rice can raise blood sugar quickly. Brown rice is better. For biryani/pulao, watch portions and pair with protein and vegetables."
-            else:
-                return "Rice is a staple carbohydrate. White rice digests quickly, brown rice has more fiber. Portion control is key for weight management."
-        
-        elif any(word in food_item for word in ['roti', 'chapati', 'bread']):
-            if detected_condition == 'diabetes':
-                return "Whole wheat roti is better than white bread for blood sugar control. Limit to 1-2 rotis per meal and pair with vegetables and protein."
-            else:
-                return "Whole wheat roti/chapati is healthier than white bread. It provides fiber and complex carbs. Good as part of balanced meals."
-        
-        elif 'dal' in food_item:
-            return "Dal (lentils) is excellent - high in protein, fiber, and nutrients. Good for all health conditions. Just watch the oil/ghee used in preparation."
-        
-        elif any(word in food_item for word in ['healthy', 'nutrition', 'diet']):
-            return "For healthy eating, focus on whole foods: vegetables, fruits, whole grains, lean proteins, and legumes. Limit processed foods, excess sugar, and unhealthy fats."
-        
-        else:
-            return "I can help with information about Indian foods like vadapav, samosa, Parle G, dosa, rice, roti, and general nutrition questions. What would you like to know?"
-    
     
     def _should_hedge_response(self, confidence_level: str) -> bool:
         """Determine if response should include more hedge language"""

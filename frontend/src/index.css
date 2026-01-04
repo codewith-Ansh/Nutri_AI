@@ -8,123 +8,106 @@
 @layer base {
   :root {
     /* Primary - Emerald Health */
-    --primary: 160 84% 39%;
+    --primary: 142 71% 45%; /* #22c55e */
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 160 90% 50%;
+    --primary-glow: 142 71% 45%;
     
-    /* Background - Clean & Fresh */
-    --background: 150 20% 98%;
-    --foreground: 160 30% 15%;
+    /* Background - Soft Off-White */
+    --background: 210 20% 98%; /* Light gray-blue tint */
+    --foreground: 220 17% 10%; /* Dark text */
 
     /* Cards & Surfaces */
     --card: 0 0% 100%;
-    --card-foreground: 160 30% 15%;
+    --card-foreground: 220 17% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 160 30% 15%;
+    --popover-foreground: 220 17% 10%;
 
-    /* Secondary - Soft Sage */
-    --secondary: 150 15% 94%;
-    --secondary-foreground: 160 30% 25%;
+    /* Secondary */
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
-    /* Muted - Subtle Gray */
-    --muted: 150 10% 92%;
-    --muted-foreground: 160 10% 45%;
+    /* Muted */
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    /* Accent - Warm Green */
-    --accent: 155 60% 90%;
-    --accent-foreground: 160 50% 20%;
+    /* Accent */
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
 
-    /* Destructive - Warning Red */
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-
-    /* Caution - Amber */
-    --caution: 45 93% 47%;
-    --caution-foreground: 45 90% 15%;
-
-    /* Safe - Green */
-    --safe: 142 76% 36%;
-    --safe-foreground: 0 0% 100%;
+    /* Destructive */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
 
     /* Chat Colors */
-    --chat-user: 217 91% 60%;
+    --chat-user: 142 71% 45%;
     --chat-user-foreground: 0 0% 100%;
-    --chat-ai: 0 0% 98%;
-    --chat-ai-foreground: 160 30% 15%;
+    --chat-ai: 0 0% 100%;
+    --chat-ai-foreground: 220 17% 10%;
 
-    /* Borders & Inputs */
-    --border: 150 15% 88%;
-    --input: 150 15% 88%;
-    --ring: 160 84% 39%;
+    /* Borders */
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 142 71% 45%;
 
     --radius: 0.75rem;
 
-    /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(160, 84%, 39%) 0%, hsl(142, 76%, 36%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(150, 20%, 98%) 0%, hsl(150, 15%, 95%) 100%);
-    --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 100%);
-
     /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(160 30% 15% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(160 30% 15% / 0.1), 0 2px 4px -2px hsl(160 30% 15% / 0.1);
-    --shadow-lg: 0 10px 15px -3px hsl(160 30% 15% / 0.1), 0 4px 6px -4px hsl(160 30% 15% / 0.1);
-    --shadow-glow: 0 0 30px hsl(160 84% 39% / 0.2);
-
-    /* Sidebar */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-glow: 0 0 30px rgba(34, 197, 94, 0.2);
   }
 
   .dark {
-    --primary: 160 70% 50%;
-    --primary-foreground: 160 30% 10%;
-    --primary-glow: 160 80% 60%;
+    /* Primary - Vibrant Green */
+    --primary: 142 71% 45%; /* #22c55e */
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 142 71% 45%;
 
-    --background: 160 20% 8%;
-    --foreground: 150 20% 95%;
+    /* Background - Premium Dark (#0f1115) */
+    --background: 220 17% 7%; 
+    --foreground: 210 40% 98%;
 
-    --card: 160 20% 12%;
-    --card-foreground: 150 20% 95%;
+    /* Cards & Surfaces - Charcoal (#171a1f) */
+    --card: 218 15% 11%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 160 20% 12%;
-    --popover-foreground: 150 20% 95%;
+    --popover: 218 15% 11%;
+    --popover-foreground: 210 40% 98%;
 
-    --secondary: 160 15% 18%;
-    --secondary-foreground: 150 20% 90%;
+    /* Secondary */
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 160 15% 20%;
-    --muted-foreground: 150 10% 60%;
+    /* Muted */
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 160 30% 20%;
-    --accent-foreground: 150 80% 80%;
+    /* Accent */
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
 
+    /* Destructive */
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive-foreground: 210 40% 98%;
 
-    --chat-user: 217 80% 55%;
+    /* Chat Colors */
+    --chat-user: 142 71% 45%;
     --chat-user-foreground: 0 0% 100%;
-    --chat-ai: 160 15% 15%;
-    --chat-ai-foreground: 150 20% 95%;
+    --chat-ai: 218 15% 11%; /* #171a1f */
+    --chat-ai-foreground: 210 40% 98%;
 
-    --border: 160 15% 20%;
-    --input: 160 15% 20%;
-    --ring: 160 70% 50%;
-
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Borders - Subtle Dark */
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 142 70.6% 45.3%;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+    --shadow-glow: 0 0 30px rgba(34, 197, 94, 0.15);
   }
 }
 
@@ -134,7 +117,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground font-sans antialiased selection:bg-primary/20 selection:text-primary;
     font-family: 'Inter', system-ui, sans-serif;
   }
 
