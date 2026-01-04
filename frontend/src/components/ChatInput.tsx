@@ -1,19 +1,26 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Camera, Upload } from "lucide-react";
+import { Send, Camera, Upload, Scan, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { BarcodeScanner } from "./BarcodeScanner";
+import { LiveCameraAnalyzer } from "./LiveCameraAnalyzer";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
+  onImageSelect?: (file: File) => void;
+  onCameraAnalysis?: (analysis: string) => void; // New prop for live camera JSON responses
   disabled?: boolean;
   placeholder?: string;
 }
 
-export const ChatInput = ({ onSend, disabled, placeholder = "Message NutriChat..." }: ChatInputProps) => {
+export const ChatInput = ({ onSend, onImageSelect, onCameraAnalysis, disabled, placeholder = "Message NutriChat..." }: ChatInputProps) => {
   const [message, setMessage] = useState("");
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [showLiveCamera, setShowLiveCamera] = useState(false);
+  const [showManualBarcode, setShowManualBarcode] = useState(false);
+  const [manualBarcode, setManualBarcode] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,36 +40,80 @@ export const ChatInput = ({ onSend, disabled, placeholder = "Message NutriChat..
     }
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      try {
-        // Actually upload the image to the API
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/analyze/image`, {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to analyze image');
-        }
-        
-        const result = await response.json();
-        
-        if (result.success && result.analysis) {
-          onSend(result.analysis);
-        } else {
-          onSend("I couldn't analyze this image clearly. Please try taking another photo with better lighting.");
-        }
-      } catch (error) {
-        console.error('Image upload error:', error);
-        onSend("I'm having trouble processing the image right now. Please try again.");
+  const handleBarcodeDetected = async (barcode: string) => {
+    console.log("Barcode detected:", barcode);
+
+    try {
+      // Call backend API with barcode
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/product/${barcode}`
+      );
+
+      if (!response.ok) {
+        throw new Error('Product not found');
       }
+
+      const result = await response.json();
+
+      if (result.found) {
+        const message = `Found product: ${result.product_name} by ${result.brands}\n\nAnalyze the ingredients: ${result.ingredients.join(', ')}`;
+        onSend(message);
+      } else {
+        onSend(`Barcode ${barcode} detected but product not found in database. Let me help you analyze this product.`);
+      }
+    } catch (error) {
+      console.error('Barcode lookup error:', error);
+      onSend(`Barcode ${barcode} detected. Let me analyze this product...`);
+    }
+  };
+
+  const handleManualBarcodeSubmit = () => {
+    if (manualBarcode.trim() && /^\d{8,13}$/.test(manualBarcode.trim())) {
+      handleBarcodeDetected(manualBarcode.trim());
+      setManualBarcode("");
+      setShowManualBarcode(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/') && onImageSelect) {
+      onImageSelect(file);
     }
     e.target.value = '';
+  };
+
+  // Try to extract barcode from uploaded image using ZXing
+  const tryExtractBarcodeFromImage = async (file: File): Promise<string | null> => {
+    try {
+      const { BrowserMultiFormatReader } = await import('@zxing/library');
+      const reader = new BrowserMultiFormatReader();
+
+      // Create image element
+      const imageUrl = URL.createObjectURL(file);
+      const image = new Image();
+
+      return new Promise((resolve) => {
+        image.onload = async () => {
+          try {
+            const result = await reader.decodeFromImageElement(image);
+            URL.revokeObjectURL(imageUrl);
+            resolve(result.getText());
+          } catch {
+            URL.revokeObjectURL(imageUrl);
+            resolve(null);
+          }
+        };
+        image.onerror = () => {
+          URL.revokeObjectURL(imageUrl);
+          resolve(null);
+        };
+        image.src = imageUrl;
+      });
+    } catch (error) {
+      console.error('ZXing extraction failed:', error);
+      return null;
+    }
   };
 
   useEffect(() => {
@@ -74,79 +125,158 @@ export const ChatInput = ({ onSend, disabled, placeholder = "Message NutriChat..
   }, [message]);
 
   return (
-    <form onSubmit={handleSubmit} className="relative">
-      <div className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-2xl shadow-sm focus-within:border-gray-300 transition-all">
-        <textarea
-          ref={textareaRef}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={disabled}
-          rows={1}
-          className={cn(
-            "flex-1 resize-none bg-transparent text-gray-900 placeholder:text-gray-500 focus:outline-none text-base leading-6",
-            "max-h-[120px] min-h-[20px] py-1",
-            disabled && "opacity-50 cursor-not-allowed"
-          )}
+    <>
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="flex items-center gap-3 p-3 bg-card border border-border rounded-2xl shadow-sm focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+          <textarea
+            ref={textareaRef}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={disabled}
+            rows={1}
+            className={cn(
+              "flex-1 resize-none bg-transparent text-foreground placeholder:text-muted-foreground focus:outline-none text-base leading-6",
+              "max-h-[120px] min-h-[20px] py-1",
+              disabled && "opacity-50 cursor-not-allowed"
+            )}
+          />
+
+          {/* Barcode Scanner Button */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            disabled={disabled}
+            onClick={() => setShowBarcodeScanner(true)}
+            className="h-10 w-10 text-primary hover:text-primary/80 hover:bg-muted"
+            title="Scan barcode"
+          >
+            <Scan className="h-4 w-4" />
+          </Button>
+
+          {/* Image Upload Button */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            disabled={disabled}
+            onClick={() => fileInputRef.current?.click()}
+            className="h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-muted"
+            title="Upload image"
+          >
+            <Upload className="h-4 w-4" />
+          </Button>
+
+          {/* Live Camera Button */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            disabled={disabled}
+            onClick={() => setShowLiveCamera(true)}
+            className="h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-muted"
+            title="Open live camera"
+          >
+            <Camera className="h-4 w-4" />
+          </Button>
+
+          {/* Send Button */}
+          <Button
+            type="submit"
+            size="icon"
+            disabled={disabled || !message.trim()}
+            className={cn(
+              "h-10 w-10 rounded-xl shrink-0 transition-all",
+              message.trim()
+                ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
+            )}
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Manual Barcode Input Toggle */}
+        <button
+          type="button"
+          onClick={() => setShowManualBarcode(!showManualBarcode)}
+          className="text-xs text-muted-foreground hover:text-primary mt-2 flex items-center gap-1 transition-colors"
+        >
+          <Scan className="h-3 w-3" />
+          {showManualBarcode ? "Hide" : "Enter barcode manually"}
+        </button>
+
+        {/* Manual Barcode Input Field */}
+        {showManualBarcode && (
+          <div className="mt-2 flex gap-2">
+            <input
+              type="text"
+              value={manualBarcode}
+              onChange={(e) => setManualBarcode(e.target.value.replace(/\D/g, ''))}
+              onKeyDown={(e) => e.key === 'Enter' && handleManualBarcodeSubmit()}
+              placeholder="Enter 8-13 digit barcode"
+              maxLength={13}
+              className="flex-1 px-3 py-2 text-sm border border-border bg-card text-foreground placeholder:text-muted-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleManualBarcodeSubmit}
+              disabled={!manualBarcode.trim() || !/^\d{8,13}$/.test(manualBarcode)}
+              className="bg-primary hover:bg-primary/90"
+            >
+              Lookup
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setShowManualBarcode(false);
+                setManualBarcode("");
+              }}
+              className="text-muted-foreground hover:text-foreground hover:bg-muted"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
         />
-        
-        {/* Image Upload Buttons */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          disabled={disabled}
-          onClick={() => fileInputRef.current?.click()}
-          className="h-10 w-10 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-          title="Upload image"
-        >
-          <Upload className="h-4 w-4" />
-        </Button>
-        
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          disabled={disabled}
-          onClick={() => cameraInputRef.current?.click()}
-          className="h-10 w-10 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-          title="Take photo"
-        >
-          <Camera className="h-4 w-4" />
-        </Button>
-        
-        <Button
-          type="submit"
-          size="icon"
-          disabled={disabled || !message.trim()}
-          className={cn(
-            "h-10 w-10 rounded-xl shrink-0 transition-all",
-            message.trim() 
-              ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" 
-              : "bg-gray-100 text-gray-400 cursor-not-allowed"
-          )}
-        >
-          <Send className="h-4 w-4" />
-        </Button>
-      </div>
-      
-      {/* Hidden file inputs */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
-    </form>
+      </form>
+
+      {/* Barcode Scanner Modal */}
+      {showBarcodeScanner && (
+        <BarcodeScanner
+          onBarcodeDetected={handleBarcodeDetected}
+          onClose={() => setShowBarcodeScanner(false)}
+        />
+      )}
+
+      {/* Live Camera Analyzer Modal */}
+      {showLiveCamera && (
+        <LiveCameraAnalyzer
+          onAnalysisComplete={(analysis) => {
+            // Use camera-specific handler if available, otherwise fallback to onSend
+            if (onCameraAnalysis) {
+              onCameraAnalysis(analysis);
+            } else {
+              onSend(analysis);
+            }
+            setShowLiveCamera(false);
+          }}
+          onClose={() => setShowLiveCamera(false)}
+        />
+      )}
+    </>
   );
 };

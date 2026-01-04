@@ -1,41 +1,52 @@
-import { Leaf, Sparkles } from "lucide-react";
+import { Share2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface HeaderProps {
-  showTest: boolean;
-  setShowTest: (show: boolean) => void;
+  onClearChat?: () => void;
+  onShare?: () => void;
 }
 
-export const Header = ({ showTest, setShowTest }: HeaderProps) => {
+export const Header = ({ onClearChat, onShare }: HeaderProps) => {
   return (
-    <header className="sticky top-0 z-50 glass border-b border-border/50">
-      <div className="container max-w-4xl mx-auto px-4 py-3">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-glow">
-                <Leaf className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-safe rounded-full flex items-center justify-center">
-                <Sparkles className="w-2.5 h-2.5 text-safe-foreground" />
-              </div>
-            </div>
-            <div>
-              <h1 className="font-display font-bold text-lg text-foreground">NutriChat</h1>
-              <p className="text-xs text-muted-foreground">AI Ingredient Interpreter</p>
-            </div>
+    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm transition-colors duration-300">
+      <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
+        {/* Logo - Full color */}
+        <div className="flex items-center gap-2.5">
+          <div className="relative w-8 h-8 rounded-full bg-card ring-1 ring-primary/20 flex items-center justify-center overflow-hidden">
+            <img
+              src="/assets/nutri-chat-logo.png"
+              alt="NutriChat Logo"
+              className="w-6 h-6 object-cover"
+            />
           </div>
+          <span className="text-base font-semibold text-foreground tracking-tight">NutriChat</span>
+        </div>
 
-          {/* Health Score Button */}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setShowTest(!showTest)}
-            className="text-xs font-medium"
-          >
-            HEALTH SCORE
-          </Button>
+        {/* Actions */}
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+
+          {onShare && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onShare}
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-primary hover:bg-muted"
+            >
+              <Share2 className="h-4 w-4" />
+            </Button>
+          )}
+          {onClearChat && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClearChat}
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-muted"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     </header>

@@ -9,15 +9,17 @@ import { generateNaturalFollowUps } from "@/lib/aiUtils";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  image?: string;
   structuredData?: {
-    ingredients: string[];
-    risk: {
-      level: "Low" | "Moderate" | "High";
-      description: string;
+    ai_insight_title: string;
+    quick_verdict: string;
+    why_this_matters: string[];
+    trade_offs: {
+      positives: string[];
+      negatives: string[];
     };
-    reasons: string[];
-    alternatives?: string[];
-    suggested_followup: string[];
+    uncertainty?: string;
+    ai_advice: string;
   };
 }
 
@@ -42,7 +44,7 @@ export const ChatContainer = () => {
 
     try {
       const sessionId = "session_" + Date.now();
-     
+
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
@@ -94,16 +96,16 @@ export const ChatContainer = () => {
 
           try {
             const parsed = JSON.parse(jsonStr);
-            
+
             // Handle structured data
             if (parsed.type === "structured") {
               setMessages(prev => {
                 const newMessages = [...prev];
                 const lastIdx = newMessages.length - 1;
                 if (newMessages[lastIdx]?.role === "assistant") {
-                  newMessages[lastIdx] = { 
-                    ...newMessages[lastIdx], 
-                    structuredData: parsed.data 
+                  newMessages[lastIdx] = {
+                    ...newMessages[lastIdx],
+                    structuredData: parsed.data
                   };
                 }
                 return newMessages;
@@ -118,8 +120,8 @@ export const ChatContainer = () => {
                   const newMessages = [...prev];
                   const lastIdx = newMessages.length - 1;
                   if (newMessages[lastIdx]?.role === "assistant") {
-                    newMessages[lastIdx] = { 
-                      ...newMessages[lastIdx], 
+                    newMessages[lastIdx] = {
+                      ...newMessages[lastIdx],
                       content: assistantContent
                     };
                   }
@@ -133,12 +135,12 @@ export const ChatContainer = () => {
           }
         }
       }
-     
+
       setShowFollowUp(true);
     } catch (error) {
       console.error("Chat error:", error);
       setIsLoading(false);
-     
+
       setMessages(prev => {
         const lastMsg = prev[prev.length - 1];
         if (lastMsg?.role === "assistant" && !lastMsg.content) {
@@ -152,6 +154,110 @@ export const ChatContainer = () => {
         description: error instanceof Error ? error.message : "Please try again in a moment.",
         variant: "destructive",
       });
+    }
+  }, []);
+
+  const handleImageSelect = useCallback(async (file: File) => {
+    // 1. Create optimistic message with image
+    const imageUrl = URL.createObjectURL(file);
+    const userMsg: Message = {
+      role: "user",
+      content: "Analyzing this product...",
+      image: imageUrl
+    };
+
+    setMessages(prev => [...prev, userMsg]);
+    setIsLoading(true);
+
+    try {
+      // 2. Upload to backend
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/analyze/image`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Analysis failed');
+      }
+
+      const result = await response.json();
+
+      // 3. Process result
+      if (result.success && result.analysis) {
+        // Try parsing JSON if it's a string, or use as is
+        let structuredData;
+        try {
+          structuredData = typeof result.analysis === 'string'
+            ? JSON.parse(result.analysis)
+            : result.analysis;
+        } catch (e) {
+          console.error("Failed to parse analysis JSON", e);
+        }
+
+        const assistantMsg: Message = {
+          role: "assistant",
+          content: "",
+          structuredData: structuredData || undefined
+        };
+
+        // If parsing failed, fallback to text content if it's not JSON
+        if (!structuredData) {
+          assistantMsg.content = result.analysis;
+        }
+
+        setMessages(prev => [...prev, assistantMsg]);
+      } else {
+        throw new Error("Invalid response");
+      }
+    } catch (error) {
+      console.error('Image upload error:', error);
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: "I had trouble reading this image. You can try another photo or ask a question."
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const handleCameraAnalysis = useCallback(async (analysis: string) => {
+    //Live camera returns JSON string from backend, parse it like image upload
+    setIsLoading(true);
+
+    try {
+      // Try parsing JSON if it's a string
+      let structuredData;
+      try {
+        structuredData = typeof analysis === 'string'
+          ? JSON.parse(analysis)
+          : analysis;
+      } catch (e) {
+        console.error("Failed to parse camera analysis JSON", e);
+      }
+
+      const assistantMsg: Message = {
+        role: "assistant",
+        content: "",
+        structuredData: structuredData || undefined
+      };
+
+      // If parsing failed, fallback to text content
+      if (!structuredData) {
+        assistantMsg.content = analysis;
+      }
+
+      setMessages(prev => [...prev, assistantMsg]);
+    } catch (error) {
+      console.error('Camera analysis error:', error);
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: "I had trouble processing the analysis. You can try again or ask a question."
+      }]);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -177,13 +283,14 @@ export const ChatContainer = () => {
             <WelcomeMessage onSuggestionSelect={handleSend} />
           </div>
         ) : (
-          <div className="max-w-5xl mx-auto px-4 py-6">
-            <div className="space-y-6">
+          <div className="max-w-3xl mx-auto px-4 py-4">
+            <div className="space-y-4">
               {messages.map((message, index) => (
                 <ChatMessage
                   key={index}
                   role={message.role}
                   content={message.content}
+                  image={message.image}
                   structuredData={message.structuredData}
                   onFollowUpClick={handleFollowUpSelect}
                   isStreaming={
@@ -201,10 +308,10 @@ export const ChatContainer = () => {
         )}
       </div>
 
-      <div className="border-t border-gray-100 bg-white">
-        <div className="max-w-5xl mx-auto px-4 py-4">
+      <div className="border-t border-border bg-background/95">
+        <div className="max-w-3xl mx-auto px-4 py-3">
           {showFollowUp && !isLoading && messages.length > 0 && messages[messages.length - 1]?.role === "assistant" && (
-            <div className="mb-4">
+            <div className="mb-3">
               <div className="flex gap-2 flex-wrap">
                 {(() => {
                   const lastResponse = messages[messages.length - 1]?.content || "";
@@ -213,7 +320,7 @@ export const ChatContainer = () => {
                     <button
                       key={index}
                       onClick={() => handleFollowUpSelect(question)}
-                      className="px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-full transition-colors"
+                      className="px-3 py-1.5 text-xs bg-card hover:bg-muted text-muted-foreground border border-border hover:border-primary/50 rounded-full transition-colors"
                     >
                       {question}
                     </button>
@@ -222,8 +329,13 @@ export const ChatContainer = () => {
               </div>
             </div>
           )}
-         
-          <ChatInput onSend={handleSend} disabled={isLoading} />
+
+          <ChatInput
+            onSend={handleSend}
+            onImageSelect={handleImageSelect}
+            onCameraAnalysis={handleCameraAnalysis}
+            disabled={isLoading}
+          />
         </div>
       </div>
     </div>

@@ -3,38 +3,39 @@ import { SuggestionChips } from "./SuggestionChips";
 
 
 interface WelcomeMessageProps {
- onSuggestionSelect: (suggestion: string) => void;
+  onSuggestionSelect: (suggestion: string) => void;
 }
 
 
 // AI-native suggestions - conversational, not technical
 const SUGGESTIONS = [
- "Is this snack okay for my kid?",
- "I'm trying to eat healthier - thoughts on this?",
- "What should I know about this product?",
- "Help me understand these ingredients",
+  "Is this snack okay for my kid?",
+  "I'm trying to eat healthier - thoughts?",
+  "What should I know about this product?",
 ];
 
 
 export const WelcomeMessage = ({ onSuggestionSelect }: WelcomeMessageProps) => {
- return (
-   <div className="flex flex-col items-center justify-center h-full px-8">
-     <div className="text-center mb-12">
-       <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mx-auto mb-8 shadow-lg">
-         <Bot className="w-8 h-8 text-white" />
-       </div>
-       <h1 className="text-4xl font-semibold text-gray-900 mb-4 tracking-tight">
-         What are you deciding about?
-       </h1>
-       <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
-         I'm here to help you think through food choices - just share what you're looking at or wondering about
-       </p>
-     </div>
+  return (
+    <div className="flex flex-col items-center justify-center p-6 space-y-8 animate-fade-in max-w-2xl mx-auto">
+      <div className="text-center space-y-4">
+        <div className="bg-card p-4 rounded-2xl inline-block ring-1 ring-primary/20 shadow-glow mb-2">
+          <img
+            src="/assets/nutri-chat-logo.png"
+            alt="NutriChat Logo"
+            className="w-16 h-16 object-cover"
+          />
+        </div>
+        <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-glow font-display">
+          Welcome to NutriChat
+        </h1>
+        <p className="text-muted-foreground text-sm max-w-md mx-auto leading-relaxed">
+          I'm your AI health co-pilot. Upload a photo of any food label,
+          and I'll help you decide if it's right for you.
+        </p>
+      </div>
 
-
-     <div className="w-full max-w-4xl">
-       <SuggestionChips suggestions={SUGGESTIONS} onSelect={onSuggestionSelect} />
-     </div>
-   </div>
- );
+      <SuggestionChips suggestions={SUGGESTIONS} onSelect={onSuggestionSelect} />
+    </div>
+  );
 };

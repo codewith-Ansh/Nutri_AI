@@ -1,171 +1,103 @@
-import { AlertTriangle, CheckCircle, XCircle, ChevronDown, ChevronUp } from "lucide-react";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { CheckCircle, AlertTriangle, Info, Lightbulb, TrendingUp, TrendingDown } from "lucide-react";
 
-interface StructuredResponseProps {
-  data: {
-    ingredients: string[];
-    risk: {
-      level: "Low" | "Moderate" | "High";
-      description: string;
-    };
-    reasons: string[];
-    alternatives?: string[];
-    suggested_followup: string[];
+interface StructuredInsight {
+  ai_insight_title: string;
+  quick_verdict: string;
+  why_this_matters: string[];
+  trade_offs: {
+    positives: string[];
+    negatives: string[];
   };
-  onFollowUpClick?: (question: string) => void;
+  uncertainty: string;
+  ai_advice: string;
 }
 
-export const StructuredResponse = ({ data, onFollowUpClick }: StructuredResponseProps) => {
-  const [showAlternatives, setShowAlternatives] = useState(false);
-  
-  const getRiskIcon = (level: string) => {
-    switch (level) {
-      case "Low":
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
-      case "Moderate":
-        return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
-      case "High":
-        return <XCircle className="w-4 h-4 text-red-600" />;
-      default:
-        return <AlertTriangle className="w-4 h-4 text-gray-600" />;
-    }
-  };
-  
-  const getRiskColor = (level: string) => {
-    switch (level) {
-      case "Low":
-        return "bg-green-50 border-green-200";
-      case "Moderate":
-        return "bg-yellow-50 border-yellow-200";
-      case "High":
-        return "bg-red-50 border-red-200";
-      default:
-        return "bg-gray-50 border-gray-200";
-    }
-  };
+interface StructuredResponseProps {
+  data: StructuredInsight;
+}
 
+export const StructuredResponse = ({ data }: StructuredResponseProps) => {
   return (
-    <div className="w-full max-w-6xl">
-      {/* Main Cards - 2x2 Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        {/* Ingredients Card */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 h-36 overflow-hidden">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <h3 className="font-medium text-base text-gray-900">Ingredients</h3>
+    <div className="space-y-3 text-sm">
+      {/* Title - Compact with subtle green tint */}
+      <div className="bg-primary/5 dark:bg-card border-none dark:border-l-2 dark:border-primary rounded-lg px-3 py-2 shadow-sm dark:shadow-none">
+        <p className="font-medium text-foreground text-sm">{data.ai_insight_title}</p>
+      </div>
+
+      {/* Quick Verdict - Inline with green icon */}
+      <div className="flex items-start gap-2 px-3 py-2 bg-primary/5 dark:bg-card rounded-lg border-none dark:border dark:border-border shadow-sm dark:shadow-none">
+        <CheckCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+        <p className="text-sm text-foreground">{data.quick_verdict}</p>
+      </div>
+
+      {/* Why This Matters - Light Yellow/Caution tint */}
+      <div className="px-3 py-2 bg-caution/5 dark:bg-card rounded-lg border-none dark:border dark:border-border shadow-sm dark:shadow-none">
+        <div className="flex items-center gap-2 mb-1.5">
+          <Info className="h-3.5 w-3.5 text-caution dark:text-primary" />
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Why this matters</p>
+        </div>
+        <ul className="space-y-1 ml-5">
+          {data.why_this_matters.map((matter, index) => (
+            <li key={index} className="text-xs text-foreground flex items-start gap-1.5">
+              <span className="text-caution dark:text-primary text-xs font-bold">•</span>
+              <span>{matter}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Trade-offs - Two Columns with colored icons only */}
+      <div className="grid md:grid-cols-2 gap-2">
+        {/* Positives - Green tint */}
+        <div className="px-3 py-2 bg-primary/5 dark:bg-card rounded-lg border-none dark:border dark:border-border shadow-sm dark:shadow-none">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <TrendingUp className="h-3.5 w-3.5 text-primary" />
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Positives</p>
           </div>
-          <div className="flex flex-wrap gap-2 h-24 overflow-hidden">
-            {data.ingredients.slice(0, 4).map((ingredient, index) => (
-              <span
-                key={index}
-                className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-sm"
-              >
-                {ingredient.length > 20 ? ingredient.substring(0, 20) + '...' : ingredient}
-              </span>
+          <ul className="space-y-1">
+            {data.trade_offs.positives.map((positive, index) => (
+              <li key={index} className="text-xs text-foreground flex items-start gap-1.5">
+                <span className="text-primary text-xs">✓</span>
+                <span>{positive}</span>
+              </li>
             ))}
-            {data.ingredients.length > 4 && (
-              <span className="text-sm text-gray-500">+{data.ingredients.length - 4} more</span>
-            )}
-          </div>
+          </ul>
         </div>
 
-        {/* Risk Card */}
-        <div className={cn(
-          "rounded-lg border p-4 h-36 overflow-hidden",
-          getRiskColor(data.risk.level)
-        )}>
-          <div className="flex items-center gap-2 mb-3">
-            {getRiskIcon(data.risk.level)}
-            <h3 className="font-medium text-base">
-              {data.risk.level} Risk
-            </h3>
+        {/* Concerns - Pink/Red tint */}
+        <div className="px-3 py-2 bg-destructive/5 dark:bg-card rounded-lg border-none dark:border dark:border-border shadow-sm dark:shadow-none">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <TrendingDown className="h-3.5 w-3.5 text-destructive dark:text-caution" />
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Concerns</p>
           </div>
-          <div className="h-24 overflow-hidden">
-            <p className="text-sm leading-relaxed">
-              {data.risk.description.length > 120 ? data.risk.description.substring(0, 120) + '...' : data.risk.description}
-            </p>
-          </div>
-        </div>
-
-        {/* Reasons Card */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 h-36 overflow-hidden">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-            <h3 className="font-medium text-base text-gray-900">Key Points</h3>
-          </div>
-          <div className="h-24 overflow-hidden">
-            <ul className="space-y-2">
-              {data.reasons.slice(0, 3).map((reason, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 bg-purple-400 rounded-full mt-2 flex-shrink-0"></span>
-                  <span className="text-sm text-gray-700 leading-relaxed">
-                    {reason.length > 60 ? reason.substring(0, 60) + '...' : reason}
-                  </span>
-                </li>
-              ))}
-              {data.reasons.length > 3 && (
-                <li className="text-sm text-gray-500">+{data.reasons.length - 3} more points</li>
-              )}
-            </ul>
-          </div>
-        </div>
-
-        {/* Alternatives Card */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4 h-36 overflow-hidden">
-          <button
-            onClick={() => setShowAlternatives(!showAlternatives)}
-            className="w-full flex items-center justify-between text-left mb-3"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-              <h3 className="font-medium text-base text-gray-900">Alternatives</h3>
-            </div>
-            {showAlternatives ? (
-              <ChevronUp className="w-4 h-4 text-gray-500 flex-shrink-0" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
-            )}
-          </button>
-          
-          <div className="h-24 overflow-hidden">
-            {data.alternatives && data.alternatives.length > 0 ? (
-              showAlternatives ? (
-                <div className="space-y-2">
-                  {data.alternatives.slice(0, 3).map((alternative, index) => (
-                    <div key={index} className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></span>
-                      <span className="text-sm text-gray-700 leading-relaxed">
-                        {alternative.length > 50 ? alternative.substring(0, 50) + '...' : alternative}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">
-                  {data.alternatives.length} option{data.alternatives.length > 1 ? 's' : ''} available - click to view
-                </p>
-              )
-            ) : (
-              <p className="text-sm text-gray-500">No alternatives suggested</p>
-            )}
-          </div>
+          <ul className="space-y-1">
+            {data.trade_offs.negatives.map((negative, index) => (
+              <li key={index} className="text-xs text-foreground flex items-start gap-1.5">
+                <span className="text-destructive dark:text-caution text-xs">!</span>
+                <span>{negative}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 
-      {/* Follow-up Questions */}
-      <div className="bg-gray-50 rounded-lg border border-gray-200 p-3">
-        <h3 className="font-medium text-sm text-gray-900 mb-2">Quick Questions</h3>
-        <div className="flex flex-wrap gap-2">
-          {data.suggested_followup.map((question, index) => (
-            <button
-              key={index}
-              onClick={() => onFollowUpClick?.(question)}
-              className="px-3 py-1.5 bg-white border border-gray-300 rounded-full text-xs text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors"
-            >
-              {question}
-            </button>
-          ))}
+      {/* Uncertainty - Lavender/Purple tint */}
+      {data.uncertainty && (
+        <div className="flex items-start gap-2 px-3 py-2 bg-purple-500/5 dark:bg-card rounded-lg border-none dark:border dark:border-border/50 shadow-sm dark:shadow-none">
+          <AlertTriangle className="h-3.5 w-3.5 text-purple-500 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5">Keep in mind</p>
+            <p className="text-xs text-muted-foreground italic">{data.uncertainty}</p>
+          </div>
+        </div>
+      )}
+
+      {/* AI Advice - Green tint */}
+      <div className="flex items-start gap-2 px-3 py-2 bg-primary/5 dark:bg-card rounded-lg border-none dark:border-l-2 dark:border-primary shadow-sm dark:shadow-none">
+        <Lightbulb className="h-3.5 w-3.5 text-primary mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-0.5">Our advice</p>
+          <p className="text-sm text-foreground">{data.ai_advice}</p>
         </div>
       </div>
     </div>
