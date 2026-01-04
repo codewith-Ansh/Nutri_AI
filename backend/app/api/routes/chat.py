@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from app.models.request_models import ChatRequest
 from app.services.gemini_service import gemini_service
-from app.services.reasoning_service_v2 import ai_native_reasoning
+from app.services.reasoning_service_v2 import enhanced_ai_reasoning
 from app.services.intent_service import ai_native_intent
 from app.utils.session_manager import session_manager
 from app.core.exceptions import NutriAIException
@@ -39,8 +39,8 @@ async def chat_stream_ai_native(request: ChatRequest):
             existing_context=existing_context
         )
         
-        # Generate AI-native reasoning response
-        reasoning_response = await ai_native_reasoning.analyze_from_text(
+        # Generate enhanced AI reasoning response with mechanism focus
+        reasoning_response = await enhanced_ai_reasoning.analyze_from_text(
             user_input=request.message,
             inferred_context=inferred_context,
             conversation_history=history[-3:] if history else None,

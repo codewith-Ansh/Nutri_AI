@@ -2,17 +2,25 @@ import logging
 import json
 from typing import List, Optional, Dict, Any
 from app.services.gemini_service import gemini_service
-from app.utils.prompts_v2 import REASONING_SYSTEM_PROMPT, VISUAL_CONTEXT_PROMPT
+from app.utils.prompts_v2 import (
+    REASONING_SYSTEM_PROMPT, 
+    VISUAL_CONTEXT_PROMPT, 
+    build_enhanced_system_prompt,
+    MECHANISM_VALIDATION_EXAMPLES,
+    CONTEXT_EMPHASIS_GUIDE
+)
 from app.core.exceptions import LLMServiceError
 from app.data.curated_reasoning import get_curated_response
 
 logger = logging.getLogger(__name__)
 
-class AINativeReasoningService:
-    """AI-native reasoning service focused on decision support, not data analysis"""
+class EnhancedAIReasoningService:
+    """Enhanced AI reasoning engine focused on mechanism-based decision support"""
     
     def __init__(self):
         self.gemini = gemini_service
+        self.validation_examples = MECHANISM_VALIDATION_EXAMPLES
+        self.context_guide = CONTEXT_EMPHASIS_GUIDE
     
     async def analyze_from_text(
         self,
@@ -21,7 +29,7 @@ class AINativeReasoningService:
         conversation_history: Optional[List[Dict[str, str]]] = None,
         language: str = "en"
     ) -> str:
-        """Generate reasoning-driven response from text input"""
+        """Generate enhanced mechanism-based reasoning response from text input"""
         
         # First, check for curated responses (demo foods)
         curated_response = get_curated_response(user_input)
@@ -36,86 +44,214 @@ class AINativeReasoningService:
                 language = detected_lang
                 logger.info(f"Using detected language: {language}")
         
-        # Otherwise, use LLM reasoning
+        # Extract context for emphasis adjustment
+        context_type = None
+        if inferred_context:
+            context_type = inferred_context.get('possible_context', None)
+            logger.info(f"Applying context emphasis: {context_type}")
+        
+        # Use enhanced LLM reasoning with mechanism focus
         try:
-            # Build context-aware prompt
-            context_info = ""
-            if inferred_context:
-                likely_goal = inferred_context.get('likely_goal', '')
-                possible_context = inferred_context.get('possible_context', '')
-                soft_concerns = inferred_context.get('soft_concerns', [])
-                hedge_language = inferred_context.get('hedge_language', '')
-                
-                context_info = f"""
-Inferred context:
-- Likely goal: {likely_goal}
-- Possible context: {possible_context}
-- Soft concerns: {', '.join(soft_concerns) if soft_concerns else 'none'}
-- Hedge approach: {hedge_language}
-"""
+            # Build enhanced context-aware prompt
+            context_info = self._build_context_info(inferred_context)
+            history_context = self._build_history_context(conversation_history)
             
-            # Build conversation context
-            history_context = ""
-            if conversation_history:
-                recent_msgs = conversation_history[-3:]  # Last 3 messages
-                history_context = "\nRecent conversation:\n" + "\n".join([
-                    f"{msg.get('role', 'user')}: {msg.get('content', '')[:100]}..."
-                    for msg in recent_msgs
-                ])
-            
-            # Build language instruction
-            language_instruction = ""
-            if language == "hi":
-                language_instruction = "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond in Hindi (Devanagari script). Translate ALL content to Hindi while keeping JSON field names in English. Example: 'quick_verdict': 'यह स्वादिष्ट है लेकिन रोज़ाना खाने के लिए उपयुक्त नहीं है।'"
-            elif language == "hinglish":
-                language_instruction = "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond in Hinglish (Hindi written in English script). Translate ALL content to Hinglish while keeping JSON field names in English. Example: 'quick_verdict': 'Ye tasty hai lekin daily khane ke liye ideal nahi hai.'"
-            else:
-                language_instruction = "\n\nRespond in English."
-            
-            # Enhanced prompt with better food recognition
+            # Build enhanced prompt with mechanism requirements
             prompt = f"""
 User question: "{user_input}"
 {context_info}
-{history_context}{language_instruction}
+{history_context}
 
-Provide a direct, focused answer to the user's specific question. Be concise and helpful.
+CRITICAL REQUIREMENTS:
+1. MECHANISM-LEVEL REASONING: Explain WHY each major claim happens (biological/behavioral cause), not just WHAT happens
+2. SPECIFIC UNCERTAINTY: Reference exact variables, avoid generic "varies by person"
+3. DEPTH WITHOUT LENGTH: One precise causal explanation over multiple shallow points
+4. CONTEXT AWARENESS: {self._get_context_emphasis(context_type)}
 
-For food questions:
-- Answer what they asked specifically
-- Keep responses under 3 sentences when possible
-- Focus on the key point they want to know
-- Don't add unnecessary background unless directly relevant
+Provide mechanism-based decision support following the enhanced reasoning requirements.
 
-For Indian/regional foods like Parle G, vadapav, etc.:
-- Give direct answers about what they are
-- Address specific concerns (diabetes, health, etc.) if mentioned
-- Be practical and actionable
+Examples of good mechanism reasoning:
+- "MSG intensifies umami taste, which can override natural satiety signals and encourage overeating"
+- "Palm oil raises LDL cholesterol by altering liver lipid regulation"
+- "Sodium sensitivity varies due to genetic and kidney-response differences"
 
-Avoid:
-- Long explanations about cultural significance unless asked
-- Generic advice about "moderation" unless specifically relevant
-- Asking follow-up questions unless the query is unclear
-
-Be direct and helpful.
+Avoid shallow statements like "contains additives" or "effects vary by person".
 """
+            
+            # Use enhanced system prompt with language and context awareness
+            enhanced_system_prompt = build_enhanced_system_prompt(language, context_type)
             
             response = await self.gemini.generate_text(
                 prompt=prompt,
-                system_instruction=REASONING_SYSTEM_PROMPT + language_instruction,
-                temperature=0.4
+                system_instruction=enhanced_system_prompt,
+                temperature=0.3  # Lower temperature for more consistent reasoning
             )
             
-            return response.strip()
+            # Validate response quality
+            validated_response = self._validate_response_quality(response.strip(), language)
+            
+            return validated_response
             
         except Exception as e:
-            logger.error(f"Text reasoning failed: {str(e)}")
-            # Try curated response as fallback
-            curated_fallback = get_curated_response(user_input)
-            if curated_fallback:
-                logger.info("Using curated fallback due to LLM error")
-                return json.dumps(curated_fallback, ensure_ascii=False)
+            logger.error(f"Enhanced reasoning failed: {str(e)}")
+            return self._generate_fallback_response(user_input, language)
+    
+    def _build_context_info(self, inferred_context: Optional[Dict[str, Any]]) -> str:
+        """Build enhanced context information with emphasis guidance"""
+        if not inferred_context:
+            return ""
+        
+        likely_goal = inferred_context.get('likely_goal', '')
+        possible_context = inferred_context.get('possible_context', '')
+        soft_concerns = inferred_context.get('soft_concerns', [])
+        hedge_language = inferred_context.get('hedge_language', '')
+        confidence_level = inferred_context.get('confidence_level', '')
+        
+        return f"""
+Inferred context for emphasis adjustment:
+- Likely goal: {likely_goal}
+- Possible context: {possible_context}
+- Soft concerns: {', '.join(soft_concerns) if soft_concerns else 'none'}
+- Confidence level: {confidence_level}
+- Hedge approach: {hedge_language}
+"""
+    
+    def _build_history_context(self, conversation_history: Optional[List[Dict[str, str]]]) -> str:
+        """Build conversation history context"""
+        if not conversation_history:
+            return ""
+        
+        recent_msgs = conversation_history[-3:]  # Last 3 messages
+        return "\nRecent conversation:\n" + "\n".join([
+            f"{msg.get('role', 'user')}: {msg.get('content', '')[:100]}..."
+            for msg in recent_msgs
+        ])
+    
+    def _get_context_emphasis(self, context_type: Optional[str]) -> str:
+        """Get context-specific emphasis instructions"""
+        if context_type == 'parent':
+            return "Focus on child habit formation, taste conditioning, and long-term preference shaping when relevant."
+        elif context_type == 'health_conscious':
+            return "Emphasize biological mechanisms, cumulative exposure, and long-term health effects when relevant."
+        elif context_type == 'quick_decision':
+            return "Highlight the single most important risk or benefit first for quick decision-making."
+        elif context_type == 'shopping':
+            return "Briefly compare with similar alternatives when relevant for shopping decisions."
+        else:
+            return "Provide balanced mechanism-based reasoning for general decision support."
+    
+    def _clean_json_response(self, response: str) -> str:
+        """Clean JSON response from markdown code blocks"""
+        response = response.strip()
+        
+        # Remove markdown code blocks
+        if response.startswith("```json"):
+            response = response[7:]
+        elif response.startswith("```"):
+            response = response[3:]
+        
+        if response.endswith("```"):
+            response = response[:-3]
+        
+        return response.strip()
+    
+    def _validate_response_quality(self, response: str, language: str) -> str:
+        """Validate response meets enhanced reasoning requirements"""
+        try:
+            # Clean the response first
+            cleaned_response = self._clean_json_response(response)
             
-            # Return structured error response if all else fails
+            # Parse JSON to ensure valid structure
+            parsed = json.loads(cleaned_response)
+            
+            # Check required fields
+            required_fields = ['ai_insight_title', 'quick_verdict', 'why_this_matters', 'trade_offs', 'uncertainty', 'ai_advice']
+            missing_fields = [field for field in required_fields if field not in parsed]
+            
+            if missing_fields:
+                logger.warning(f"Response missing required fields: {missing_fields}")
+                return self._fix_missing_fields(parsed, missing_fields, language)
+            
+            # Validate trade_offs structure
+            if 'trade_offs' in parsed and isinstance(parsed['trade_offs'], dict):
+                if 'positives' not in parsed['trade_offs'] or 'negatives' not in parsed['trade_offs']:
+                    logger.warning("Trade-offs missing positives or negatives")
+                    parsed['trade_offs'] = {
+                        'positives': parsed['trade_offs'].get('positives', ['Available for analysis']),
+                        'negatives': parsed['trade_offs'].get('negatives', ['Limited information available'])
+                    }
+            
+            # Quality checks for mechanism reasoning (basic validation)
+            why_matters = parsed.get('why_this_matters', [])
+            if isinstance(why_matters, list):
+                shallow_indicators = ['contains', 'has', 'includes']
+                for matter in why_matters:
+                    if isinstance(matter, str) and any(indicator in matter.lower() for indicator in shallow_indicators):
+                        if not any(mechanism in matter.lower() for mechanism in ['because', 'which', 'by', 'due to', 'causes', 'leads to']):
+                            logger.info("Detected potentially shallow reasoning, but proceeding")
+            
+            return json.dumps(parsed, ensure_ascii=False)
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON response: {str(e)}")
+            return self._generate_fallback_response("parsing error", language)
+    
+    def _fix_missing_fields(self, parsed: dict, missing_fields: List[str], language: str) -> str:
+        """Fix response with missing required fields"""
+        defaults = {
+            'ai_insight_title': 'Food Analysis' if language == 'en' else ('खाद्य विश्लेषण' if language == 'hi' else 'Food Analysis'),
+            'quick_verdict': 'Analysis completed' if language == 'en' else ('विश्लेषण पूरा' if language == 'hi' else 'Analysis complete'),
+            'why_this_matters': ['Information processed for your decision'],
+            'trade_offs': {'positives': ['Available for review'], 'negatives': ['Limited data available']},
+            'uncertainty': 'Individual responses may vary',
+            'ai_advice': 'Consider your personal health goals when making decisions'
+        }
+        
+        for field in missing_fields:
+            parsed[field] = defaults.get(field, 'Not available')
+        
+        return json.dumps(parsed, ensure_ascii=False)
+    
+    def _generate_fallback_response(self, user_input: str, language: str) -> str:
+        """Generate structured fallback response when main reasoning fails"""
+        # Try curated response first
+        curated_fallback = get_curated_response(user_input)
+        if curated_fallback:
+            logger.info("Using curated fallback due to reasoning error")
+            return json.dumps(curated_fallback, ensure_ascii=False)
+        
+        # Generate language-appropriate fallback
+        if language == 'hi':
+            error_response = {
+                "ai_insight_title": "अस्थायी सेवा समस्या",
+                "quick_verdict": "मुझे अभी AI सेवा के साथ कुछ तकनीकी कठिनाइयाँ हो रही हैं।",
+                "why_this_matters": [
+                    "AI तर्क सेवा अस्थायी रूप से अनुपलब्ध है",
+                    "आप सामान्य खाद्य पदार्थों के बारे में पूछ सकते हैं या थोड़ी देर बाद कोशिश कर सकते हैं"
+                ],
+                "trade_offs": {
+                    "positives": ["सेवा में बाधा अस्थायी है"],
+                    "negatives": ["इस समय विस्तृत विश्लेषण प्रदान नहीं कर सकता"]
+                },
+                "uncertainty": "सेवा जल्द ही बहाल हो जानी चाहिए। सामान्य भारतीय खाद्य पदार्थों के लिए, मैं अभी भी मदद कर सकता हूँ।",
+                "ai_advice": "कृपया अपना प्रश्न फिर से पूछें, या समोसा, वड़ापाव, या पारले जी जैसे विशिष्ट खाद्य पदार्थों के बारे में पूछें।"
+            }
+        elif language == 'hinglish':
+            error_response = {
+                "ai_insight_title": "Temporary Service Issue",
+                "quick_verdict": "Mujhe abhi AI service ke saath kuch technical difficulties ho rahi hain.",
+                "why_this_matters": [
+                    "AI reasoning service temporarily unavailable hai",
+                    "Aap common foods ke baare mein pooch sakte hain ya thodi der baad try kar sakte hain"
+                ],
+                "trade_offs": {
+                    "positives": ["Service interruption temporary hai"],
+                    "negatives": ["Abhi detailed analysis provide nahi kar sakta"]
+                },
+                "uncertainty": "Service jaldi restore ho jaani chahiye. Common Indian foods ke liye, main abhi bhi help kar sakta hun.",
+                "ai_advice": "Please apna question phir se try kariye, ya specific foods jaise samosa, vadapav, ya Parle G ke baare mein puchiye."
+            }
+        else:
             error_response = {
                 "ai_insight_title": "Temporary Service Issue",
                 "quick_verdict": "I'm having some technical difficulties with the AI service right now.",
@@ -128,10 +264,11 @@ Be direct and helpful.
                     "negatives": ["Cannot provide detailed analysis at the moment"]
                 },
                 "uncertainty": "Service should be restored shortly. For common Indian foods, I may still be able to help.",
-                "ai_advice": "Please try your question again, or ask about specific foods like samosa, vadapav, or Parle G.",
-                "_source": "error_fallback"
+                "ai_advice": "Please try your question again, or ask about specific foods like samosa, vadapav, or Parle G."
             }
-            return json.dumps(error_response, ensure_ascii=False)
+        
+        error_response["_source"] = "enhanced_fallback"
+        return json.dumps(error_response, ensure_ascii=False)
     
     async def analyze_from_image(
         self,
@@ -139,9 +276,9 @@ Be direct and helpful.
         inferred_context: Optional[Dict[str, Any]] = None,
         language: str = "en"
     ) -> str:
-        """Generate reasoning-driven response from image with product recognition"""
+        """Generate enhanced mechanism-based response from image with product recognition"""
         try:
-            logger.info("Starting image analysis with Gemini Vision")
+            logger.info("Starting enhanced image analysis with Gemini Vision")
             
             # Use Gemini Vision to analyze the image
             import google.generativeai as genai
@@ -157,18 +294,45 @@ Be direct and helpful.
             image = Image.open(io.BytesIO(image_data))
             logger.info(f"Image loaded: {image.size} pixels")
             
-            # Use structured prompt for consistent JSON output with language support
-            prompt = VISUAL_CONTEXT_PROMPT
+            # Extract context for emphasis adjustment
+            context_type = None
+            if inferred_context:
+                context_type = inferred_context.get('possible_context', None)
+            
+            # Use enhanced structured prompt for consistent JSON output with mechanism focus
+            enhanced_prompt = VISUAL_CONTEXT_PROMPT
+            
+            # Add context-specific emphasis
+            if context_type:
+                enhanced_prompt += f"\n\nCONTEXT EMPHASIS: {self._get_context_emphasis(context_type)}"
+            
+            # Add mechanism requirements
+            enhanced_prompt += """
+
+CRITICAL REASONING REQUIREMENTS:
+1. MECHANISM-LEVEL REASONING: Explain WHY ingredients matter (biological/behavioral cause), not just WHAT they are
+2. SPECIFIC UNCERTAINTY: Reference exact variables, avoid generic "varies by person"
+3. DEPTH WITHOUT LENGTH: One precise causal explanation over multiple shallow points
+
+Examples of good mechanism reasoning:
+- "High sodium triggers water retention by disrupting kidney filtration balance"
+- "Trans fats interfere with cell membrane function, increasing inflammation markers"
+- "Artificial sweeteners may disrupt gut bacteria balance, affecting glucose metabolism"
+
+Avoid shallow statements like "contains preservatives" or "has artificial ingredients".
+"""
+            
+            # Add language-specific instructions
             if language == "hi":
-                prompt += "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond in Hindi (Devanagari script). Translate ALL content to Hindi while keeping JSON field names in English."
+                enhanced_prompt += "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond in Hindi (Devanagari script). Translate ALL content to Hindi while keeping JSON field names in English. Preserve all mechanism-level reasoning depth."
             elif language == "hinglish":
-                prompt += "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond in Hinglish (Hindi written in English script). Translate ALL content to Hinglish while keeping JSON field names in English."
+                enhanced_prompt += "\n\nCRITICAL LANGUAGE REQUIREMENT: You MUST respond in Hinglish (Hindi written in English script). Translate ALL content to Hinglish while keeping JSON field names in English. Preserve all mechanism-level reasoning depth."
             else:
-                prompt += "\n\nRespond in English."
+                enhanced_prompt += "\n\nRespond in English with full mechanism-based reasoning."
             
             # Generate response with image
-            logger.info("Calling Gemini Vision API")
-            response = model.generate_content([prompt, image])
+            logger.info("Calling Gemini Vision API with enhanced reasoning")
+            response = model.generate_content([enhanced_prompt, image])
             
             result_text = response.text.strip()
             # Clean md code blocks if present
@@ -180,20 +344,20 @@ Be direct and helpful.
                 result_text = result_text[:-3]
             result_text = result_text.strip()
 
-            logger.info("Gemini Vision analysis completed successfully")
+            logger.info("Enhanced Gemini Vision analysis completed successfully")
             
-            # Note: We skip the secondary barcode lookup to preserve the structured JSON format
-            # The Vision API is powerful enough to read the label directly
+            # Validate response quality
+            validated_response = self._validate_response_quality(result_text, language)
             
-            return result_text
+            return validated_response
             
         except Exception as e:
-            logger.error(f"Gemini Vision analysis failed: {str(e)}")
-            # Try OCR fallback
-            return await self._fallback_ocr_analysis(image_data)
+            logger.error(f"Enhanced Gemini Vision analysis failed: {str(e)}")
+            # Try OCR fallback with enhanced reasoning
+            return await self._enhanced_fallback_ocr_analysis(image_data, language)
     
-    async def _fallback_ocr_analysis(self, image_data: bytes) -> str:
-        """Fallback OCR-based analysis when vision API fails"""
+    async def _enhanced_fallback_ocr_analysis(self, image_data: bytes, language: str) -> str:
+        """Enhanced OCR-based analysis when vision API fails"""
         try:
             # Save image temporarily for OCR
             import tempfile
@@ -209,30 +373,38 @@ Be direct and helpful.
                 extracted_text = image_service.extract_text_ocr(tmp_path)
                 
                 if extracted_text:
-                    # Analyze the extracted text
+                    # Enhanced analysis with mechanism focus
                     analysis_prompt = f"""
 I extracted this text from a food product image:
 
 {extracted_text}
 
-Please help identify:
-1. What product this might be
-2. Key ingredients mentioned
-3. Any nutritional concerns
-4. Brand or product name if visible
+CRITICAL REQUIREMENTS:
+1. MECHANISM-LEVEL REASONING: Explain WHY ingredients matter (biological/behavioral cause)
+2. SPECIFIC UNCERTAINTY: Reference exact variables, not generic "varies by person"
+3. DEPTH WITHOUT LENGTH: One precise causal explanation over multiple shallow points
 
-Provide a helpful analysis of this food product.
+Provide enhanced mechanism-based analysis following the structured JSON format.
+
+Examples of good reasoning:
+- "Sodium benzoate preserves freshness but may trigger hyperactivity in sensitive children by affecting neurotransmitter balance"
+- "High fructose corn syrup bypasses normal glucose regulation, leading to faster fat storage"
+
+Avoid shallow statements like "contains preservatives" or "has artificial ingredients".
 """
+                    
+                    # Use enhanced system prompt
+                    enhanced_system_prompt = build_enhanced_system_prompt(language)
                     
                     response = await self.gemini.generate_text(
                         prompt=analysis_prompt,
-                        system_instruction="You are a helpful nutrition assistant. Analyze food products from text extracted from images.",
-                        temperature=0.4
+                        system_instruction=enhanced_system_prompt,
+                        temperature=0.3
                     )
                     
-                    return response.strip()
+                    return self._validate_response_quality(response.strip(), language)
                 else:
-                    return "I couldn't extract clear text from this image. Try taking a clearer photo of the product label or ingredient list."
+                    return self._generate_fallback_response("OCR extraction failed", language)
             
             finally:
                 # Clean up temp file
@@ -240,8 +412,8 @@ Provide a helpful analysis of this food product.
                     os.remove(tmp_path)
                     
         except Exception as e:
-            logger.error(f"Fallback OCR analysis failed: {str(e)}")
-            return "I'm having trouble analyzing this image. Please try taking a clearer photo of the product package, focusing on the ingredient list or barcode area."
+            logger.error(f"Enhanced fallback OCR analysis failed: {str(e)}")
+            return self._generate_fallback_response("Image analysis failed", language)
     
     def _extract_barcode_from_response(self, response_text: str) -> str:
         """Extract barcode number from AI response"""
@@ -300,5 +472,8 @@ Provide a helpful analysis of this food product.
         else:
             return "People usually think about..."
 
-# Singleton instance
-ai_native_reasoning = AINativeReasoningService()
+# Singleton instance with enhanced capabilities
+enhanced_ai_reasoning = EnhancedAIReasoningService()
+
+# Backward compatibility alias
+ai_native_reasoning = enhanced_ai_reasoning

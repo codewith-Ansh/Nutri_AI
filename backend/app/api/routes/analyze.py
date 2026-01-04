@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from app.models.request_models import TextAnalysisRequest
 from app.services.image_services import image_service
-from app.services.reasoning_service_v2 import ai_native_reasoning
+from app.services.reasoning_service_v2 import enhanced_ai_reasoning
 from app.services.intent_service import ai_native_intent
 from app.utils.session_manager import session_manager
 from app.core.exceptions import NutriAIException
@@ -30,11 +30,12 @@ async def analyze_text_ai_native(request: TextAnalysisRequest):
             existing_context=existing_context
         )
         
-        # Generate AI-native reasoning response
-        reasoning_response = await ai_native_reasoning.analyze_from_text(
+        # Generate enhanced AI reasoning response with mechanism focus
+        reasoning_response = await enhanced_ai_reasoning.analyze_from_text(
             user_input=request.text,
             inferred_context=inferred_context,
-            conversation_history=history[-3:] if history else None
+            conversation_history=history[-3:] if history else None,
+            language=request.language if hasattr(request, 'language') else "en"
         )
         
         # Store context and conversation
@@ -42,7 +43,7 @@ async def analyze_text_ai_native(request: TextAnalysisRequest):
         session_manager.add_message(session_id, "user", request.text)
         session_manager.add_message(session_id, "assistant", reasoning_response)
         
-        logger.info(f"AI-native text analysis completed for session {session_id}")
+        logger.info(f"Enhanced AI reasoning analysis completed for session {session_id}")
         
         # Return simple response - no structured data, no scores
         return {
@@ -89,21 +90,21 @@ async def analyze_image_ai_native(
         )
         logger.info("Context inference completed")
         
-        # Generate AI-native reasoning from image with product recognition
-        logger.info("Starting image analysis")
-        reasoning_response = await ai_native_reasoning.analyze_from_image(
+        # Generate enhanced AI reasoning from image with mechanism focus
+        logger.info("Starting enhanced image analysis")
+        reasoning_response = await enhanced_ai_reasoning.analyze_from_image(
             image_data=image_data,
             inferred_context=inferred_context,
             language=language or "en"
         )
-        logger.info("Image analysis completed successfully")
+        logger.info("Enhanced image analysis completed successfully")
         
         # Store context and conversation
         session_manager.update_context(session_id, inferred_context)
         session_manager.add_message(session_id, "user", "Shared a photo of food product")
         session_manager.add_message(session_id, "assistant", reasoning_response)
         
-        logger.info(f"Product recognition analysis completed for session {session_id}")
+        logger.info(f"Enhanced product recognition analysis completed for session {session_id}")
         
         # Return response with product identification
         return {
