@@ -29,11 +29,14 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins_list,
+    allow_origins=settings.allowed_origins_list,  
+    allow_origin_regex=r"https://.*\.vercel\.app",  
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"],  
     allow_headers=["*"],
+    expose_headers=["*"],  
 )
+
 
 # Register routes
 app.include_router(health.router, prefix="/api", tags=["Health"])
