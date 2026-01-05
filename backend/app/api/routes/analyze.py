@@ -99,6 +99,15 @@ async def analyze_image_ai_native(
         )
         logger.info("Enhanced image analysis completed successfully")
         
+        # NEW: Extract and store food context for follow-up questions
+        try:
+            food_context = _extract_food_context_simple(reasoning_response)
+            if food_context:
+                session_manager.set_food_context(session_id, food_context)
+                logger.info(f"Stored food context: {food_context.get('product_name', 'unknown')}")
+        except Exception as e:
+            logger.warning(f"Could not extract food context: {str(e)}")
+        
         # Store context and conversation
         session_manager.update_context(session_id, inferred_context)
         session_manager.add_message(session_id, "user", "Shared a photo of food product")

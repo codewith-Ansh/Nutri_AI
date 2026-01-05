@@ -11,21 +11,21 @@ interface HeaderProps {
 export const Header = ({ onClearChat, onShare }: HeaderProps) => {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm transition-colors duration-300">
-      <div className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
+      <div className="mx-auto max-w-5xl px-3 sm:px-4 h-14 flex items-center justify-between">
         {/* Logo - Full color */}
-        <div className="flex items-center gap-2.5">
-          <div className="relative w-8 h-8 rounded-full bg-card ring-1 ring-primary/20 flex items-center justify-center overflow-hidden">
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="relative w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-card ring-1 ring-primary/20 flex items-center justify-center overflow-hidden">
             <img
               src="/assets/nutri-chat-logo.png"
               alt="NutriChat Logo"
-              className="w-6 h-6 object-cover"
+              className="w-5 h-5 sm:w-6 sm:h-6 object-cover"
             />
           </div>
-          <span className="text-base font-semibold text-foreground tracking-tight">NutriChat</span>
+          <span className="text-sm sm:text-base font-semibold text-foreground tracking-tight">NutriChat</span>
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <LanguageToggle />
           <ThemeToggle />
 

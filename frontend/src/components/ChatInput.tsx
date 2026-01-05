@@ -141,7 +141,7 @@ export const ChatInput = ({ onSend, onImageSelect, onCameraAnalysis, disabled, p
   return (
     <>
       <form onSubmit={handleSubmit} className="relative">
-        <div className="flex items-center gap-3 p-3 bg-card border border-border rounded-2xl shadow-sm focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+        <div className="flex flex-nowrap items-center gap-1.5 sm:gap-2 md:gap-3 p-2 sm:p-3 bg-card border border-border rounded-2xl shadow-sm focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
           <textarea
             ref={textareaRef}
             value={message}
@@ -164,10 +164,10 @@ export const ChatInput = ({ onSend, onImageSelect, onCameraAnalysis, disabled, p
             size="icon"
             disabled={disabled}
             onClick={() => setShowBarcodeScanner(true)}
-            className="h-10 w-10 text-primary hover:text-primary/80 hover:bg-muted"
+            className="h-9 w-9 sm:h-10 sm:w-10 text-primary hover:text-primary/80 hover:bg-muted shrink-0"
             title="Scan barcode"
           >
-            <Scan className="h-4 w-4" />
+            <Scan className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </Button>
 
           {/* Image Upload Button */}
@@ -177,10 +177,10 @@ export const ChatInput = ({ onSend, onImageSelect, onCameraAnalysis, disabled, p
             size="icon"
             disabled={disabled}
             onClick={() => fileInputRef.current?.click()}
-            className="h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="h-9 w-9 sm:h-10 sm:w-10 text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"
             title="Upload image"
           >
-            <Upload className="h-4 w-4" />
+            <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </Button>
 
           {/* Live Camera Button */}
@@ -190,10 +190,10 @@ export const ChatInput = ({ onSend, onImageSelect, onCameraAnalysis, disabled, p
             size="icon"
             disabled={disabled}
             onClick={() => setShowLiveCamera(true)}
-            className="h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="h-9 w-9 sm:h-10 sm:w-10 text-muted-foreground hover:text-foreground hover:bg-muted shrink-0"
             title="Open live camera"
           >
-            <Camera className="h-4 w-4" />
+            <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </Button>
 
           {/* Send Button */}
@@ -202,13 +202,13 @@ export const ChatInput = ({ onSend, onImageSelect, onCameraAnalysis, disabled, p
             size="icon"
             disabled={disabled || !message.trim()}
             className={cn(
-              "h-10 w-10 rounded-xl shrink-0 transition-all",
+              "h-9 w-9 sm:h-10 sm:w-10 rounded-xl shrink-0 transition-all",
               message.trim()
                 ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             )}
           >
-            <Send className="h-4 w-4" />
+            <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </Button>
         </div>
 

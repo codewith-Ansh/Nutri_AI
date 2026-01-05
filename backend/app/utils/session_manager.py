@@ -39,6 +39,18 @@ class SessionManager:
     def set_intent(self, session_id: str, intent_json: dict):
         """Set intent data for session"""
         session_store.set_intent(session_id, intent_json)
+    
+    def set_food_context(self, session_id: str, food_context: dict):
+        """Store food context from analyzed meal/product"""
+        session_store.set_food_context(session_id, food_context)
+    
+    def get_food_context(self, session_id: str) -> Optional[dict]:
+        """Get stored food context for session"""
+        return session_store.get_food_context(session_id)
+    
+    def clear_food_context(self, session_id: str):
+        """Clear food context (e.g., when user uploads new image)"""
+        session_store.clear_food_context(session_id)
 
 # Singleton instance
 session_manager = SessionManager()

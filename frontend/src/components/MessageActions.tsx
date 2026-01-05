@@ -1,4 +1,4 @@
-import { Copy, Share2, Edit, Check, Volume2, VolumeX } from "lucide-react";
+import { Copy, Share2, Edit, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useState } from "react";
@@ -10,11 +10,9 @@ interface MessageActionsProps {
     language?: string;
     messageId: string;
     onEdit?: () => void;
-    onSpeak?: (messageId: string) => void;
-    isSpeaking?: boolean;
 }
 
-export const MessageActions = ({ content, structuredData, role, language, messageId, onEdit, onSpeak, isSpeaking }: MessageActionsProps) => {
+export const MessageActions = ({ content, structuredData, role, language, messageId, onEdit }: MessageActionsProps) => {
     const [copied, setCopied] = useState(false);
 
     const handleCopy = async () => {
@@ -135,34 +133,25 @@ export const MessageActions = ({ content, structuredData, role, language, messag
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             {role === "assistant" && (
                 <>
-                    {/* Speak Button */}
+                    {/* Copy Button */}
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                        onClick={() => onSpeak?.(messageId)}
-                        title={isSpeaking ? "Stop speaking" : "Speak"}
-                        aria-label={isSpeaking ? "Stop speaking" : "Speak message"}
-                    >
-                        {isSpeaking ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                        className="h-11 w-11 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground"
                         onClick={handleCopy}
                         title="Copy"
                     >
-                        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                        {copied ? <Check className="h-4 w-4 sm:h-3.5 sm:w-3.5" /> : <Copy className="h-4 w-4 sm:h-3.5 sm:w-3.5" />}
                     </Button>
+                    {/* Share Button */}
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                        className="h-11 w-11 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground"
                         onClick={handleShare}
                         title="Share"
                     >
-                        <Share2 className="h-3 w-3" />
+                        <Share2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                     </Button>
                 </>
             )}
@@ -170,11 +159,11 @@ export const MessageActions = ({ content, structuredData, role, language, messag
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                    className="h-11 w-11 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground"
                     onClick={onEdit}
                     title="Edit"
                 >
-                    <Edit className="h-3 w-3" />
+                    <Edit className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                 </Button>
             )}
         </div>

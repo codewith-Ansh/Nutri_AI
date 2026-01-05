@@ -27,7 +27,9 @@ class EnhancedAIReasoningService:
         user_input: str,
         inferred_context: Optional[Dict[str, Any]] = None,
         conversation_history: Optional[List[Dict[str, str]]] = None,
-        language: str = "en"
+        language: str = "en",
+        food_context: Optional[Dict[str, Any]] = None,
+        conversation_summary: Optional[str] = None
     ) -> str:
         """Generate enhanced mechanism-based reasoning response from text input"""
         
@@ -37,15 +39,13 @@ class EnhancedAIReasoningService:
             logger.info(f"Using curated response for: {curated_response.get('_food', 'unknown')}")
             return json.dumps(curated_response, ensure_ascii=False)
         
-        # Use detected language from context if no explicit language provided
-        if language == "en" and inferred_context:
-            detected_lang = inferred_context.get('detected_language', 'en')
-            if detected_lang in ['hi', 'hinglish', 'gu']:
-                language = detected_lang
-                logger.info(f"Using detected language: {language}")
+        # STRICT LANGUAGE PRIORITY: UI-selected language always wins
+        # Auto-detection is used ONLY for intent understanding, NOT output language
+        selected_language = language  # This comes from UI, never override it
+        logger.info(f"Strict language mode: {selected_language} (UI-selected, no auto-detection override)")
         
         # For Gujarati, always use enhanced Gujarati response
-        if language == "gu":
+        if selected_language == "gu":
             logger.info("Using enhanced Gujarati response for all food questions")
             return await self._generate_enhanced_gujarati_response(user_input, inferred_context)
         
@@ -61,11 +61,39 @@ class EnhancedAIReasoningService:
             context_info = self._build_context_info(inferred_context)
             history_context = self._build_history_context(conversation_history)
             
+            # NEW: Inject food context if this is a follow-up question
+            food_context_str = ""
+            if food_context:
+                food_context_str = self._build_food_context_injection(food_context)
+                logger.info(f"Injecting food context for follow-up: {food_context.get('product_name', 'unknown')}")
+            
+            # NEW: Inject conversation summary for topic grounding
+            conversation_summary_str = ""
+            if conversation_summary:
+                conversation_summary_str = f"\n{conversation_summary}\n"
+                logger.info("Injecting conversation summary for follow-up grounding")
+            
             # Build enhanced prompt with mechanism requirements
             prompt = f"""
+{conversation_summary_str}
+{food_context_str}
 User question: "{user_input}"
 {context_info}
 {history_context}
+
+FOLLOW-UP QUESTION RULE (MANDATORY):
+If the user asks a follow-up question using words like:
+"this", "it", "can I eat", "is it safe", "for kids", "daily", "how much"
+
+You MUST:
+- Answer strictly based on the Recent Conversation Summary above
+- Assume the user is referring to the last discussed product
+- Do NOT introduce any new food items
+- Do NOT generalize beyond the current product
+
+If context is still unclear, ask ONE clarification question:
+"Are you asking about the [product name] discussed above?"
+Do NOT proceed with a generic answer.
 
 CRITICAL REQUIREMENTS:
 1. MECHANISM-LEVEL REASONING: Explain WHY each major claim happens (biological/behavioral cause), not just WHAT happens
@@ -83,8 +111,8 @@ Examples of good mechanism reasoning:
 Avoid shallow statements like "contains additives" or "effects vary by person".
 """
             
-            # Use enhanced system prompt with language and context awareness
-            enhanced_system_prompt = build_enhanced_system_prompt(language, context_type, user_input)
+            # Use enhanced system prompt with STRICT language enforcement
+            enhanced_system_prompt = build_enhanced_system_prompt(selected_language, context_type, user_input)
             
             response = await self.gemini.generate_text(
                 prompt=prompt,
@@ -93,13 +121,13 @@ Avoid shallow statements like "contains additives" or "effects vary by person".
             )
             
             # Validate response quality
-            validated_response = self._validate_response_quality(response.strip(), language)
+            validated_response = self._validate_response_quality(response.strip(), selected_language)
             
             return validated_response
             
         except Exception as e:
             logger.error(f"Enhanced reasoning failed: {str(e)}")
-            return self._generate_fallback_response(user_input, language)
+            return self._generate_fallback_response(user_input, selected_language)
     
     def _build_context_info(self, inferred_context: Optional[Dict[str, Any]]) -> str:
         """Build enhanced context information with emphasis guidance"""
@@ -131,6 +159,33 @@ Inferred context for emphasis adjustment:
             f"{msg.get('role', 'user')}: {msg.get('content', '')[:100]}..."
             for msg in recent_msgs
         ])
+    
+    def _build_food_context_injection(self, food_context: Dict[str, Any]) -> str:
+        """Build MANDATORY food context injection for follow-up questions"""
+        product_name = food_context.get('product_name', 'the previously analyzed food')
+        concerns = food_context.get('concerns', [])
+        positives = food_context.get('positives', [])
+        
+        concerns_str = ', '.join(concerns[:3]) if concerns else 'none identified'
+        positives_str = ', '.join(positives[:2]) if positives else 'none specified'
+        
+        return f"""
+ACTIVE FOOD CONTEXT - MANDATORY ENFORCEMENT:
+Product Name: {product_name}
+Key Health Concerns: {concerns_str}
+Positive Aspects: {positives_str}
+
+MANDATORY CONTEXT ADHERENCE: If food context is provided above, answer ONLY about that specific product. Do NOT mention, compare, or introduce any other foods.
+
+CRITICAL INSTRUCTION: The user is asking a follow-up question about this specific product.
+You MUST answer about "{product_name}" ONLY. 
+Do NOT mention any other food items (cookies, biscuits, snacks, etc.).
+Do NOT ask the user to re-specify the product.
+Do NOT give generic nutrition advice.
+Answer their question using this product context exclusively.
+
+This instruction overrides all other reasoning or creativity.
+"""
     
     def _get_context_emphasis(self, context_type: Optional[str]) -> str:
         """Get context-specific emphasis instructions"""

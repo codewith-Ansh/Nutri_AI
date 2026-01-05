@@ -7,7 +7,6 @@ import { toast } from "@/hooks/use-toast";
 import { generateNaturalFollowUps } from "@/lib/aiUtils";
 import { useLanguage } from "@/hooks/useLanguage";
 
-
 interface Message {
   role: "user" | "assistant";
   content: string;
@@ -45,8 +44,6 @@ export const ChatContainer = () => {
   });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const language = useLanguage();
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
 
   useEffect(() => {
     if (scrollContainerRef.current) {
@@ -57,8 +54,6 @@ export const ChatContainer = () => {
   useEffect(() => {
     localStorage.setItem('nutri_chat_messages', JSON.stringify(messages));
   }, [messages]);
-
-
 
   const streamChat = useCallback(async (userMessage: string) => {
     const userMsg: Message = { role: "user", content: userMessage };
@@ -306,166 +301,10 @@ export const ChatContainer = () => {
     handleSend(question);
   }, [handleSend]);
 
-  // Speech helper functions
-  const getVoiceForLanguage = useCallback((lang: string): string => {
-    const voiceMap: Record<string, string> = {
-      'en': 'en-US',
-      'hi': 'hi-IN',
-      'hinglish': 'en-IN',
-      'gu': 'gu-IN'
-    };
-    return voiceMap[lang] || 'en-US';
-  }, []);
 
-  const cleanTextForSpeech = useCallback((text: string, structuredData?: any): string => {
-    if (structuredData) {
-      let cleanText = `${structuredData.quick_verdict}. `;
-      if (Array.isArray(structuredData.why_this_matters)) {
-        cleanText += `${structuredData.why_this_matters.join('. ')}. `;
-      }
-      if (structuredData.ai_advice) {
-        cleanText += `${structuredData.ai_advice}.`;
-      }
-      return cleanText;
-    }
+  
 
-    return text
-      .replace(/[#*_`]/g, '')
-      .replace(/[\u{1F600}-\u{1F64F}]/gu, '')
-      .replace(/[\u{1F300}-\u{1F5FF}]/gu, '')
-      .replace(/[\u{1F680}-\u{1F6FF}]/gu, '')
-      .replace(/[\u{2600}-\u{26FF}]/gu, '')
-      .replace(/[\u{2700}-\u{27BF}]/gu, '')
-      .replace(/✓|✗|•/g, '')
-      .trim();
-  }, []);
-
-  const handleSpeak = useCallback(async (messageId: string) => {
-    const index = parseInt(messageId.replace('msg-', ''));
-    const message = messages[index];
-
-    if (!message || message.role !== "assistant") return;
-
-    const messageLang = message.language || language;
-
-    // GUJARATI SAFETY GUARD: Gujarati not supported in browser-only mode
-    if (messageLang === 'gu') {
-      toast({
-        title: "Speech not supported",
-        description: "Gujarati speech is not supported on this device",
-        variant: "destructive",
-        duration: 3000,
-      });
-      return;
-    }
-
-    // Check browser support
-    if (!('speechSynthesis' in window)) {
-      toast({
-        title: "Speech not supported",
-        description: "Your browser doesn't support text-to-speech",
-        variant: "destructive",
-        duration: 3000,
-      });
-      return;
-    }
-
-    // Stop currently playing speech
-    if (isSpeaking) {
-      window.speechSynthesis.cancel();
-      if (speakingMessageId === messageId) {
-        setIsSpeaking(false);
-        setSpeakingMessageId(null);
-        return;
-      }
-    }
-
-    try {
-      const cleanText = cleanTextForSpeech(message.content, message.structuredData);
-
-      if (!cleanText) {
-        toast({
-          title: "No text to speak",
-          variant: "destructive",
-          duration: 2000,
-        });
-        return;
-      }
-
-      const voiceLang = getVoiceForLanguage(messageLang);
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-
-      utterance.lang = voiceLang;
-      utterance.rate = 0.9;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-
-      // Wait for voices to load
-      let voices = window.speechSynthesis.getVoices();
-      if (voices.length === 0) {
-        await new Promise<void>((resolve) => {
-          window.speechSynthesis.onvoiceschanged = () => {
-            voices = window.speechSynthesis.getVoices();
-            resolve();
-          };
-          setTimeout(() => resolve(), 100);
-        });
-      }
-
-      // Explicitly select best matching voice
-      const availableVoices = window.speechSynthesis.getVoices();
-
-      // Try exact match first
-      let matchingVoice = availableVoices.find(voice => voice.lang === voiceLang);
-
-      // If no exact match, try language prefix (e.g., "hi" in "hi-IN")
-      if (!matchingVoice) {
-        const langPrefix = voiceLang.split('-')[0];
-        matchingVoice = availableVoices.find(voice =>
-          voice.lang.startsWith(langPrefix)
-        );
-      }
-
-      if (matchingVoice) {
-        utterance.voice = matchingVoice;
-      } else {
-        // No matching voice found
-        toast({
-          title: "Voice not available",
-          description: `${messageLang} voice not found on your device`,
-          variant: "destructive",
-          duration: 3000,
-        });
-        return;
-      }
-
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        setSpeakingMessageId(null);
-      };
-
-      utterance.onerror = (event) => {
-        console.error('Speech error:', event);
-        setIsSpeaking(false);
-        setSpeakingMessageId(null);
-      };
-
-      setIsSpeaking(true);
-      setSpeakingMessageId(messageId);
-      window.speechSynthesis.speak(utterance);
-
-    } catch (error) {
-      console.error('Speech synthesis error:', error);
-      setIsSpeaking(false);
-      setSpeakingMessageId(null);
-      toast({
-        title: "Speech failed",
-        description: "Failed to start speech synthesis",
-        variant: "destructive",
-        duration: 3000,
-      });
-    }
-  }, [messages, language, isSpeaking, speakingMessageId, getVoiceForLanguage, cleanTextForSpeech, toast]);
+  
 
   const handleEditMessage = useCallback((index: number) => {
     const messageToEdit = messages[index];
@@ -480,14 +319,6 @@ export const ChatContainer = () => {
     }
   }, [messages]);
 
-  // Cleanup: Stop speech on unmount
-  useEffect(() => {
-    return () => {
-      if (isSpeaking && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, [isSpeaking]);
 
   return (
     <div className="flex flex-col h-full">
@@ -500,7 +331,7 @@ export const ChatContainer = () => {
             <WelcomeMessage onSuggestionSelect={handleSend} />
           </div>
         ) : (
-          <div className="max-w-3xl mx-auto px-4 py-4">
+          <div className="max-w-3xl mx-auto px-3 sm:px-4 py-4">
             <div className="space-y-4">
               {messages.map((message, index) => (
                 <div key={index}>
@@ -514,8 +345,6 @@ export const ChatContainer = () => {
                     structuredData={message.structuredData}
                     onFollowUpClick={handleFollowUpSelect}
                     onEdit={message.role === "user" ? () => handleEditMessage(index) : undefined}
-                    onSpeak={message.role === "assistant" ? handleSpeak : undefined}
-                    isSpeaking={speakingMessageId === `msg-${index}`}
                     isStreaming={
                       isLoading &&
                       index === messages.length - 1 &&
@@ -533,7 +362,7 @@ export const ChatContainer = () => {
       </div>
 
       <div className="border-t border-border bg-background/95">
-        <div className="max-w-3xl mx-auto px-4 py-3">
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 py-3">
           {showFollowUp && !isLoading && messages.length > 0 && messages[messages.length - 1]?.role === "assistant" && (
             <div className="mb-3">
               <div className="flex gap-2 flex-wrap">

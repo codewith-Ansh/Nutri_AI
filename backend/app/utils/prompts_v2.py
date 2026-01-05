@@ -338,7 +338,29 @@ def build_enhanced_system_prompt(language: str = "en", context: str = None, user
     # CRITICAL: HARD LANGUAGE OVERRIDE - Triple enforcement
     base_prompt = f"""
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️  CRITICAL LANGUAGE OVERRIDE (READ THIS FIRST) ⚠️
+⚠️  LANGUAGE OUTPUT RULE (STRICT) - READ THIS FIRST ⚠️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+YOU MUST REPLY **ONLY** IN: {selected_lang}
+
+This is the user-selected language from the UI.
+This rule OVERRIDES ALL other language detection logic.
+
+STRICT RULES:
+1. Ignore automatic language detection for OUTPUT
+2. Do NOT mix languages
+3. Do NOT switch language based on input text
+4. Do NOT default to English unless explicitly selected
+5. This rule overrides all other instructions
+
+EXCEPTION (ONLY ONE):
+If the user explicitly says "reply in Hindi" or "answer in Gujarati", etc.,
+then honor that request.
+
+Otherwise, YOU MUST USE: {selected_lang}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  CRITICAL LANGUAGE OVERRIDE (DO NOT IGNORE) ⚠️
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 YOU MUST REPLY **ONLY** IN: {selected_lang}
@@ -373,9 +395,9 @@ CRITICAL RULES (REPEAT FOR EMPHASIS):
 2. JSON keys stay in English (ai_insight_title, etc.)
 3. Ignore user input language completely
 4. Do NOT use English unless {selected_lang} == "English"
-5. Do NOT use Hindi unless {selected_lang} == "Hindi"
-6. Do NOT use Gujarati unless {selected_lang} == "Gujarati"
-7. Do NOT use Hinglish unless {selected_lang} == "Hinglish"
+5. Do NOT use Hindi unless {selected_lang} == "Hindi (Devanagari script)"
+6. Do NOT use Gujarati unless {selected_lang} == "Gujarati (ગુજરાતી script)"
+7. Do NOT use Hinglish unless {selected_lang} == "Hinglish (Hindi written in English script)"
 
 If you respond in the wrong language, you FAILED this task.
 

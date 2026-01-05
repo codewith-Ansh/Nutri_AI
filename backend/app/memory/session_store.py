@@ -20,7 +20,8 @@ class InMemorySessionStore:
             "created_at": time.time(),
             "messages": [],
             "context": {},
-            "intent": {}
+            "intent": {},
+            "food_context": None  # Store last analyzed food details
         }
         logger.info(f"Created session: {session_id}")
         return session_id
@@ -72,6 +73,29 @@ class InMemorySessionStore:
             return {}
         return self.sessions[session_id]["intent"]
     
+    def set_food_context(self, session_id: str, food_context: dict):
+        """Set food context (last analyzed product/meal) for session"""
+        if session_id not in self.sessions:
+            self.create_session_if_not_exists(session_id)
+        
+        self.sessions[session_id]["food_context"] = {
+            **food_context,
+            "stored_at": time.time()
+        }
+        logger.info(f"Stored food context for session {session_id}: {food_context.get('product_name', 'unknown')}")
+    
+    def get_food_context(self, session_id: str) -> Optional[dict]:
+        """Get food context for session"""
+        if session_id not in self.sessions:
+            return None
+        return self.sessions[session_id].get("food_context")
+    
+    def clear_food_context(self, session_id: str):
+        """Clear food context for session"""
+        if session_id in self.sessions:
+            self.sessions[session_id]["food_context"] = None
+            logger.info(f"Cleared food context for session {session_id}")
+    
     def create_session_if_not_exists(self, session_id: str):
         """Create session if it doesn't exist"""
         if session_id not in self.sessions:
@@ -80,7 +104,8 @@ class InMemorySessionStore:
                 "created_at": time.time(),
                 "messages": [],
                 "context": {},
-                "intent": {}
+                "intent": {},
+                "food_context": None
             }
 
 # Create singleton instance
