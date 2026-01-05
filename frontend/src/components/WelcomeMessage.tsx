@@ -9,9 +9,9 @@ interface WelcomeMessageProps {
 
 // AI-native suggestions - conversational, not technical
 const SUGGESTIONS = [
-  "Is this snack okay for my kid?",
-  "I'm trying to eat healthier - thoughts?",
-  "What should I know about this product?",
+"Is this safe for kids?",
+"Is this a healthy choice?",
+"What should I watch out for?"
 ];
 
 
